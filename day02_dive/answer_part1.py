@@ -1,5 +1,4 @@
 import argparse
-from multiprocessing.connection import answer_challenge
 from pathlib import Path
 
 
