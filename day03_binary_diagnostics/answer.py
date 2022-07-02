@@ -2,8 +2,10 @@ import argparse
 from pathlib import Path
 
 
-def bitwise_not_fixed_n_bits(number, n_bits):
-    return int("1" * n_bits, 2) - number
+def bitwise_not_for_fixed_number_of_bits(number, n_bits):
+    result = int("1" * n_bits, 2) - number
+    assert result >= 0
+    return result
 
 
 def power_consumption(path: Path) -> int:
@@ -24,7 +26,7 @@ def power_consumption(path: Path) -> int:
 
     # compute epsilon rate and power consumption
     gamma_rate = int(gamma_rate_str, 2)
-    epsilon_rate = bitwise_not_fixed_n_bits(gamma_rate, n_bits)
+    epsilon_rate = bitwise_not_for_fixed_number_of_bits(gamma_rate, n_bits)
     return gamma_rate * epsilon_rate
 
 
