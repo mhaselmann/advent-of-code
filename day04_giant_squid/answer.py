@@ -79,7 +79,7 @@ def get_last_winning_board(boards: list[Board], seq: list[int]) -> Board:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Advent of Code Day 03: Binary Diagnostic:")
+    parser = argparse.ArgumentParser(description="Advent of Code Day 04: Giant Squid:")
     parser.add_argument("-i", help="Input file path")
     args = parser.parse_args()
     path = Path(args.i) if args.i else Path("input.txt")
