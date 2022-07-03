@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 
 
-class BingoBoard:
+class Board:
     def __init__(self, board: list[list[int]]):
         self._board = np.array(board)
         assert self._board.shape == (5, 5)
@@ -34,8 +34,8 @@ class BingoBoard:
         return f"\n{self.__class__}\n{self._board}\n{self._marked}\n{self._last_called_number}\n"
 
 
-def parse_input(path: Path) -> tuple[list[BingoBoard], list[int]]:
-    boards: list[BingoBoard] = []
+def parse_input(path: Path) -> tuple[list[Board], list[int]]:
+    boards: list[Board] = []
     current_board: list[list[int]] = []
     with open(path) as f:
         for line_idx, line in enumerate(f):
@@ -45,18 +45,18 @@ def parse_input(path: Path) -> tuple[list[BingoBoard], list[int]]:
             if line[0] == "\n":  # skip empty lines
                 if len(current_board) == 0:
                     continue
-                boards.append(BingoBoard(current_board))
+                boards.append(Board(current_board))
                 current_board = []
                 continue
             current_board.append([int(n) for n in line.split()])
         # add last boards if no empty line is at end of document
         if len(current_board) == 5:
-            boards.append(BingoBoard(current_board))
+            boards.append(Board(current_board))
     return boards, seq
 
 
 # why is it so slow?
-def get_first_winning_board(boards: list[BingoBoard], seq: list[int]) -> BingoBoard:
+def get_first_winning_board(boards: list[Board], seq: list[int]) -> Board:
     for number in seq:
         for board in boards:
             board.mark(number)
@@ -65,7 +65,7 @@ def get_first_winning_board(boards: list[BingoBoard], seq: list[int]) -> BingoBo
     raise ValueError(f"Sequence {seq} not long enough for any board to win")
 
 
-def get_last_winning_board(boards: list[BingoBoard], seq: list[int]) -> BingoBoard:
+def get_last_winning_board(boards: list[Board], seq: list[int]) -> Board:
     boards.reverse()
     for number in seq:
         for idx in reversed(range(len(boards))):
