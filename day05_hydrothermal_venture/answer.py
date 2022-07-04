@@ -11,14 +11,16 @@ def get_vent_map(path: Path, no_diag_lines: bool = False) -> np.ndarray:
     max_y, max_x = 0, 0
     with open(path) as f:
         for line in f:
-            x0, y0, x1, y1 = map(int, re.split(" -> |,", line))
-            if y0 == y1 or x0 == x1:  # consider hor. and ver. vent_lines_hv
+            x0, y0, x1, y1 = map(int, re.split(" -> |,", line))  # parse text line
+
+            if y0 == y1 or x0 == x1:  # consider hor. and ver. vent lines
                 max_y, max_x = max(max_y, y0, y1), max(max_x, x0, x1)
                 if y0 + x0 < y1 + x1:
                     vent_lines_hv.append(((y0, y1), (x0, x1)))
                 else:
                     vent_lines_hv.append(((y1, y0), (x1, x0)))
-            elif not no_diag_lines:  # consider vertical lines
+
+            elif not no_diag_lines:  # consider vertical vent line lines
                 max_y, max_x = max(max_y, y0, y1), max(max_x, x0, x1)
                 y_sign, x_sign = np.sign(y1 - y0), np.sign(x1 - x0)
                 vent_line_ys, vent_line_xs = [], []
@@ -33,7 +35,6 @@ def get_vent_map(path: Path, no_diag_lines: bool = False) -> np.ndarray:
         vent_map[vl[0][0] : vl[0][1] + 1, vl[1][0] : vl[1][1] + 1] += 1
     for vl in vent_lines_diag:
         vent_map[tuple(vl)] += 1
-
     return vent_map
 
 
