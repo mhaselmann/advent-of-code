@@ -29,7 +29,7 @@ class LanternfishSimulator:
             }
             self.state[self._timer_reset] += n_resets
 
-    def __len__(self):
+    def size(self):
         return sum(self.state.values())
 
 
@@ -46,4 +46,5 @@ if __name__ == "__main__":
     simulator = LanternfishSimulator(initial_state)
     simulator.simulate(days=days)
 
-    print(f"Number of lanternfishes after {simulator.day} days: {len(simulator)}")
+    print(f"Number of lanternfishes after {simulator.day} days:")
+    print(simulator.size())
