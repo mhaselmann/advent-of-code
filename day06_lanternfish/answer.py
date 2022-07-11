@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from collections import defaultdict
 
 
 def read_input_file(path: Path) -> list[int]:
@@ -8,14 +9,28 @@ def read_input_file(path: Path) -> list[int]:
     return list(map(int, input.split(",")))
 
 
-def simulate_lanternfishes(
-    initial_state: list[int], days: int, timer_reset: int = 6, new_lanternfish_timer: int = 8
-) -> list[int]:
-    state = initial_state.copy()
-    for _ in range(days):
-        new_lanternfishes = [new_lanternfish_timer] * state.count(0)
-        state = [x - 1 if x > 0 else timer_reset for x in state] + new_lanternfishes
-    return state
+class LanternfishSimulator:
+    def __init__(
+        self, initial_state: list[int], timer_reset: int = 6, new_lanternfish_timer: int = 8
+    ):
+        self._timer_reset = timer_reset
+        self._new_lf_timer = new_lanternfish_timer
+        self._max_timer = max(timer_reset, new_lanternfish_timer)
+        self.state = {timer: initial_state.count(timer) for timer in range(self._max_timer + 1)}
+        self.day = 0
+
+    def simulate(self, days: int):
+        self.day += days
+        for _ in range(days):
+            n_resets = self.state[0]
+            self.state = {
+                t: self.state[t + 1] if t < self._max_timer else n_resets
+                for t in self.state.keys()
+            }
+            self.state[self._timer_reset] += n_resets
+
+    def __len__(self):
+        return sum(self.state.values())
 
 
 if __name__ == "__main__":
@@ -28,5 +43,7 @@ if __name__ == "__main__":
     assert path.exists()
 
     state = read_input_file(path)
-    state = simulate_lanternfishes(state, days)
-    print(f"Answer part 1 (#lanternfishes after {days} days): {len(state)}")
+    simulator = LanternfishSimulator(state)
+    simulator.simulate(days=days)
+
+    print(f"Number of lanternfishes after {simulator.day} days: {len(simulator)}")
