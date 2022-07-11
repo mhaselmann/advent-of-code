@@ -42,8 +42,8 @@ if __name__ == "__main__":
     days = int(args.d) if args.d else 80
     assert path.exists()
 
-    state = read_input_file(path)
-    simulator = LanternfishSimulator(state)
+    initial_state = read_input_file(path)
+    simulator = LanternfishSimulator(initial_state)
     simulator.simulate(days=days)
 
     print(f"Number of lanternfishes after {simulator.day} days: {len(simulator)}")
