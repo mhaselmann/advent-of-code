@@ -38,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", help="Input file path")
     parser.add_argument("-d", help="Simulate d days")
     args = parser.parse_args()
-    path = Path(args.i) if args.i else Path("input.txt")
+    path = Path(args.i) if args.i else Path("example_input.txt")
     days = int(args.d) if args.d else 80
     assert path.exists()
 

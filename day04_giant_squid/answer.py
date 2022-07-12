@@ -82,7 +82,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code Day 04: Giant Squid:")
     parser.add_argument("-i", help="Input file path")
     args = parser.parse_args()
-    path = Path(args.i) if args.i else Path("input.txt")
+    path = Path(args.i) if args.i else Path("example_input.txt")
     assert path.exists()
     boards, seq = parse_input(path)
 

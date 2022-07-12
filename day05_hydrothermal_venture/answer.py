@@ -42,7 +42,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code - Day 5: Hydrothermal Venture")
     parser.add_argument("-i", help="Input file path")
     args = parser.parse_args()
-    path = Path(args.i) if args.i else Path("input.txt")
+    path = Path(args.i) if args.i else Path("example_input.txt")
     assert path.exists()
     vent_map = get_vent_map(path, no_diag_lines=True)
     vent_overlap = vent_map >= 2
