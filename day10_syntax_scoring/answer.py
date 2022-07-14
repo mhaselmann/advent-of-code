@@ -11,7 +11,7 @@ def resolve_chunks(
             line_open_chars.append(c)
         elif c in list(close_open_chars.keys()):
             if close_open_chars[c] == line_open_chars[-1]:
-                del line_open_chars[-1]
+                line_open_chars.pop()
             else:
                 return c  # error --> return char with erronous closing symbol
     return line_open_chars  # no errors --> return non-closed opening symbols
