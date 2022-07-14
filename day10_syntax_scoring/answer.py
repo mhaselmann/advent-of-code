@@ -29,7 +29,7 @@ def score_autocompletion(non_closed_open_chars: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Advent of Code - Day 7: The Treachery of Whales")
+    parser = argparse.ArgumentParser(description="Advent of Code - Day 10: Syntax Scoring")
     parser.add_argument("-i", help="Input file path")
     args = parser.parse_args()
     path = Path(args.i) if args.i else Path("example_input.txt")
