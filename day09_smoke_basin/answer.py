@@ -46,7 +46,7 @@ def get_basins(height_map: ndarray, local_minima: ndarray) -> dict[tuple[int, in
 
     def flow_upward_to_nearest_neighbors(
         basin: ndarray, flow_front_locs: tuple[list[int], list[int]]
-    ):
+    ) -> ndarray:
         for row, col in zip(*flow_front_locs):
             # for row, col in flow_front_locs:
             point = height_map[row, col]
