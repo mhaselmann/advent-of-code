@@ -1,5 +1,4 @@
 import argparse
-from multiprocessing.sharedctypes import Value
 from pathlib import Path
 
 
@@ -18,34 +17,25 @@ def resolve_chunks(
     return line_open_chars  # no errors --> return non-closed opening symbols
 
 
-def score_erronous_chars(erronous_chars: list[str]) -> int:
+def score_erronous_chars(
+    erronous_chars: list[str],
+    score_per_symbol: dict[str, int] = {")": 3, "]": 57, "}": 1197, ">": 25137},
+) -> int:
     score = 0
     for c in erronous_chars:
-        if c == ")":
-            score += 3
-        elif c == "]":
-            score += 57
-        elif c == "}":
-            score += 1197
-        elif c == ">":
-            score += 25137
-        else:
-            raise ValueError(f"{c} can not be scored")
+        score += score_per_symbol[c]
     return score
 
 
-def score_autocompletion(non_closed_open_chars: list[str]) -> int:
+def score_autocompletion(
+    non_closed_open_chars: list[str],
+    mult: int = 5,
+    incr_per_symbol: dict[str, int] = {"(": 1, "[": 2, "{": 3, "<": 4},
+) -> int:
     score = 0
     for c in reversed(non_closed_open_chars):
-        score *= 5
-        if c == "(":
-            score += 1
-        elif c == "[":
-            score += 2
-        elif c == "{":
-            score += 3
-        elif c == "<":
-            score += 4
+        score *= mult
+        score += incr_per_symbol[c]
     return score
 
 
