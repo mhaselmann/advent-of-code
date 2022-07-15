@@ -294,8 +294,6 @@ Given the starting energy levels of the dumbo octopuses in your cavern, simulate
 
 Your puzzle answer was 1732.
 
-The first half of this puzzle is complete! It provides one gold star: *
-
 --- Part Two ---
 It seems like the individual flashes aren't bright enough to navigate. However, you might have a better option: the flashes seem to be synchronizing!
 
@@ -338,9 +336,12 @@ After step 195:
 0000000000
 If you can calculate the exact moments when the octopuses will all flash simultaneously, you should be able to navigate through the cavern. What is the first step during which all octopuses flash?
 
-Answer: 
- 
+Your puzzle answer was 290.
 
-Although it hasn't changed, you can still get your puzzle input.
+Both parts of this puzzle are complete! They provide two gold stars: **
+
+At this point, you should return to your Advent calendar and try another puzzle.
+
+If you still want to see it, you can get your puzzle input.
 
 You can also [Share] this puzzle.

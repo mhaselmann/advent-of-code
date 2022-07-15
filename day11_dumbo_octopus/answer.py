@@ -44,8 +44,14 @@ if __name__ == "__main__":
     assert path.exists()
 
     energy_level_map = parse_input_file(path)
+    n_octopus = np.prod(energy_level_map.shape)
     n_flashes = 0
-    for _ in range(100):
+    for step_i in range(1000):
         step(energy_level_map)
-        n_flashes += (energy_level_map == 0).sum()
-    print(f"Answer Part 1: Number of flashes: {n_flashes}")
+        n_flashes_step_i = (energy_level_map == 0).sum()
+        n_flashes += n_flashes_step_i
+        if step_i == 99:
+            print(f"Answer Part 1: Number of flashes after {step_i + 1} steps: {n_flashes}")
+        if n_flashes_step_i == n_octopus:
+            print(f"Answer Part 2: All octopus flashed at step {step_i + 1}")
+            break
