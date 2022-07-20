@@ -4,7 +4,7 @@ from pathlib import Path
 from collections import defaultdict
 
 
-def parse_input(path) -> tuple[dict[str, list[str]], list[str]]:
+def parse_input(path) -> dict[str, list[str]]:
     graph = defaultdict(lambda: list())
     with open(path) as f:
         for line in f:
@@ -16,6 +16,7 @@ def parse_input(path) -> tuple[dict[str, list[str]], list[str]]:
 
 
 def find_all_paths(graph: dict[str, list[str]], start: str = "start", path: list[str] = []):
+    # Dijkstra's Algorithm  https://stackoverflow.com/questions/24471136/how-to-find-all-paths-between-two-graph-nodes
     path = path + [start]
     if start == "end":
         return [path]
@@ -25,7 +26,6 @@ def find_all_paths(graph: dict[str, list[str]], start: str = "start", path: list
             new_paths = find_all_paths(graph, node, path)
             for new_path in new_paths:
                 paths.append(new_path)
-            # print(start, node, new_paths, paths)
     return paths
 
 
@@ -37,7 +37,5 @@ if __name__ == "__main__":
     assert path.exists()
 
     graph = parse_input(path)
-    print(graph)
-
     paths = find_all_paths(graph)
-    print("Results: ", paths)
+    print(f"Answer part 1: How many paths: {len(paths)}")
