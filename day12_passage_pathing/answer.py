@@ -45,9 +45,7 @@ def find_all_paths(
     paths = list()
     for node in graph[start]:
         if path_cond(node=node, path=path):
-            new_paths = find_all_paths(graph, path_cond, node, path)
-            for new_path in new_paths:
-                paths.append(new_path)
+            [paths.append(p) for p in find_all_paths(graph, path_cond, node, path)]
     return paths
 
 
