@@ -1,8 +1,7 @@
 import argparse
+from collections import defaultdict
 from pathlib import Path
 from typing import Callable
-
-from collections import defaultdict
 
 
 def parse_input(file_path) -> dict[str, list[str]]:
