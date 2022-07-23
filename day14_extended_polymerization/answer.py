@@ -8,7 +8,6 @@ InsertionRules = dict[str, Optional[str]]
 
 
 def parse_input(file_path: Path) -> tuple[str, InsertionRules]:
-
     with open(file_path) as f:
         insertion_rules = defaultdict(lambda: "")
         for idx, line in enumerate(f):
@@ -35,17 +34,11 @@ class PolymerPairRepr:
             self.pair_occ[polymer[idx : idx + 2]] += 1
 
     def insert(self, insertion_rules: InsertionRules, iters: int = 1):
-        # get pair to 2 pair rules from insertion rules
-        pair_to_pairs = {}
-        for pair, insert in insertion_rules.items():
-            pair_to_pairs[pair] = (pair[0] + insert, insert + pair[1])
-
         for _ in range(iters):
             new_pair_occ = defaultdict(lambda: 0)
             for pair, amount in self.pair_occ.items():
-                new_pair0, new_pair1 = pair_to_pairs[pair]
-                new_pair_occ[new_pair0] += amount
-                new_pair_occ[new_pair1] += amount
+                new_pair_occ[pair[0] + insertion_rules[pair]] += amount
+                new_pair_occ[insertion_rules[pair] + pair[1]] += amount
             self.pair_occ = new_pair_occ
 
     def get_element_occ(self) -> dict[str, int]:
@@ -60,9 +53,6 @@ class PolymerPairRepr:
         for element, occurances in element_occ.items():
             element_occ[element] = int(element_occ[element] / 2)
         return element_occ
-
-    def __str__(self):
-        return str(self.pair_occ)
 
 
 if __name__ == "__main__":
