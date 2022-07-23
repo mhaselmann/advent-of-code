@@ -58,7 +58,6 @@ class PolymerPairRepr:
         element_occ[self.start] += 1
         element_occ[self.end] += 1
         for element, occurances in element_occ.items():
-            # assert element_occ[element] % 2 == 0  # if number of elements is even
             element_occ[element] = int(element_occ[element] / 2)
         return element_occ
 
@@ -76,7 +75,7 @@ if __name__ == "__main__":
     assert file_path.exists()
 
     polymer, insertion_rules = parse_input(file_path)
-    poly_pair_repr = PolymerPairRepr(polymer)
+    poly_pair_repr = PolymerPairRepr(polymer)  # for part 2
 
     # Part 1 (10 iterations)
     for it in range(10):
