@@ -5,7 +5,6 @@ from typing import Optional
 
 
 InsertionRules = dict[str, Optional[str]]
-PairToPairs = dict[str, tuple[str, str]]
 
 
 def parse_input(file_path: Path) -> tuple[str, InsertionRules]:
