@@ -26,9 +26,8 @@ def insert_into_polymer(polymer: str, insertion_rules: InsertionRules) -> str:
 
 
 class PolymerPairRepr:
-    def __init__(self, polymer: str):
-        self.start = polymer[0]
-        self.end = polymer[-1]
+    def __init__(self, polymer_template: str):
+        self.polymer_template = polymer_template
         self.pair_occ = defaultdict(lambda: 0)
         for idx in range(len(polymer) - 1):
             self.pair_occ[polymer[idx : idx + 2]] += 1
@@ -45,13 +44,7 @@ class PolymerPairRepr:
         element_occ = defaultdict(lambda: 0)
         for pair, occurances in self.pair_occ.items():
             element_occ[pair[0]] += occurances
-            element_occ[pair[1]] += occurances
-
-        # pairs are sharing each element with another pair except for start and end element
-        element_occ[self.start] += 1
-        element_occ[self.end] += 1
-        for element, occurances in element_occ.items():
-            element_occ[element] = int(element_occ[element] / 2)
+        element_occ[self.polymer_template[-1]] += 1
         return element_occ
 
 
