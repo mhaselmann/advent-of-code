@@ -35,9 +35,9 @@ class PolymerPairRepr:
     def insert(self, insertion_rules: InsertionRules, iters: int = 1):
         for _ in range(iters):
             new_pair_occ = defaultdict(lambda: 0)
-            for pair, amount in self.pair_occ.items():
-                new_pair_occ[pair[0] + insertion_rules[pair]] += amount
-                new_pair_occ[insertion_rules[pair] + pair[1]] += amount
+            for pair, occurances in self.pair_occ.items():
+                new_pair_occ[pair[0] + insertion_rules[pair]] += occurances
+                new_pair_occ[insertion_rules[pair] + pair[1]] += occurances
             self.pair_occ = new_pair_occ
 
     def get_element_occ(self) -> dict[str, int]:
