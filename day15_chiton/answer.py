@@ -58,10 +58,11 @@ def find_all_paths(
     global min_path_weight
     path = GraphPath(path=path.path + [start], weight=path.weight + graph[start[0], start[1]])
     # cancel path traversing if weight is above min_path_weight
-    if min_path_weight is not None and path.weight > min_path_weight:
+    dist_to_end = graph.shape[0] - 1 - start[0] + graph.shape[1] - 1 - start[1]
+    if min_path_weight is not None and path.weight + dist_to_end >= min_path_weight:
         return []
     if start == (graph.shape[0] - 1, graph.shape[1] - 1):
-        print("HERE", path, path.weight, min_path_weight)
+        print("HERE", path.weight, min_path_weight)
         min_path_weight = path.weight
         return [path]
     paths = []
