@@ -6,14 +6,13 @@ from typing import Callable, Optional
 import numpy as np
 
 
-min_path_weight: Optional[int] = None  # global variable
 Node = tuple[int, int]
 
 
 @dataclass
 class GraphPath:
     path: list[Node]
-    weight: int = 0
+    weight_sum: int = 0
 
 
 def parse_input_file(path: Path) -> np.ndarray:
@@ -41,12 +40,37 @@ def get_nearest_neighbor_locations(
     return nn_rows, nn_cols
 
 
-def path_cond(node: Node, path: GraphPath) -> bool:
-    return False if node in path.path else True
+class MinimumPathFinder:
+    def __init__(self, graph: np.ndarray):
+        self.weight_sum: Optional[int] = None
+        self.path: Optional[list[Node]] = None
+        self.__search(graph)
 
+    def path_cond(self, node: Node, path: GraphPath) -> bool:
+        return False if node in path.path else True
 
-def path_cond_(node: Node, path: GraphPath) -> bool:
-    return False if node in path.path else True
+    def __search(
+        self,
+        graph: np.ndarray,
+        start: Node = [0, 0],
+        path: GraphPath = GraphPath([]),
+    ) -> list[GraphPath]:
+        path = GraphPath(path.path + [start], path.weight_sum + graph[start[0], start[1]])
+        # cancel path traversing if weight is above min_path_weight
+        dist_to_end = graph.shape[0] - 1 - start[0] + graph.shape[1] - 1 - start[1]
+        if self.weight_sum is not None and path.weight_sum + dist_to_end >= self.weight_sum:
+            return []
+        if start == (graph.shape[0] - 1, graph.shape[1] - 1):
+            print("HERE", path.weight_sum, self.weight_sum)
+            self.weight_sum = path.weight_sum
+            self.path
+            return [path]
+        paths = []
+        neighbors = get_nearest_neighbor_locations(*start, shape=graph.shape)
+        for neighbor in zip(*neighbors):
+            if self.path_cond(node=neighbor, path=path):
+                [paths.append(p) for p in self.__search(graph, neighbor, path)]
+        return paths
 
 
 def find_all_paths(
@@ -87,7 +111,7 @@ if __name__ == "__main__":
     graph = parse_input_file(file_path)
     print(graph)
 
-    paths = find_all_paths(graph=graph, path_cond=path_cond)
-    minimum_path = min(paths, key=lambda x: x.weight)
-    print(len(paths), minimum_path)
-    print(f"Answer part1: Minimal risk path's risk: {minimum_path.weight-1}")
+    min_path_finder = MinimumPathFinder(graph)
+    # minimum_path = min(paths, key=lambda x: x.weight)
+    print(min_path_finder.weight_sum)
+    print(f"Answer part1: Minimal risk path's risk: {min_path_finder.weight_sum-1}")
