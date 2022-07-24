@@ -44,6 +44,7 @@ class MinimumPathFinder:
     def __init__(self, graph: np.ndarray):
         self.weight_sum: Optional[int] = None
         self.path: Optional[list[Node]] = None
+        self._min_weight_sum = graph.sum() * np.ones(graph.shape, dtype=np.uint32)
         self.__search(graph)
 
     def __path_cond(self, node: Node, path: GraphPath) -> bool:
@@ -56,8 +57,13 @@ class MinimumPathFinder:
         path: GraphPath = GraphPath([]),
     ) -> list[GraphPath]:
         path = GraphPath(path.path + [start], path.weight_sum + graph[start[0], start[1]])
-        # cancel path traversing if weight is above min_path_weight
         dist_to_end = graph.shape[0] - 1 - start[0] + graph.shape[1] - 1 - start[1]
+        # cancel if current weight is larger as self._min_weight_sum at start point
+        if path.weight_sum <= self._min_weight_sum[start[0], start[1]]:
+            self._min_weight_sum[start[0], start[1]] = path.weight_sum
+        else:
+            return []
+        # cancel if weight is above min_path_weight + remaining distance
         if self.weight_sum is not None and path.weight_sum + dist_to_end >= self.weight_sum:
             return []
         if start == (graph.shape[0] - 1, graph.shape[1] - 1):
