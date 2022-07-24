@@ -24,10 +24,13 @@ def parse_input_file(path: Path) -> np.ndarray:
 
 
 def get_nearest_neighbor_locations(
-    row: int, col: int, shape: tuple[int, int]
+    row: int, col: int, shape: tuple[int, int], down_right_only: bool = False
 ) -> tuple[list[int], list[int]]:  # list of rows, list of columns
     # priotize down and left moves to priotize short paths
-    nn_rows, nn_cols = [row + 1, row, row - 1, row], [col, col + 1, col, col - 1]
+    if down_right_only:
+        nn_rows, nn_cols = [row + 1, row], [col, col + 1]
+    else:
+        nn_rows, nn_cols = [row + 1, row, row - 1, row], [col, col + 1, col, col - 1]
     for idx in reversed(range(len(nn_rows))):
         if nn_rows[idx] < 0:
             nn_rows.pop(idx), nn_cols.pop(idx)
@@ -45,7 +48,7 @@ class MinimumPathFinder:
         self.weight_sum: Optional[int] = None
         self.path: Optional[list[Node]] = None
         self._min_weight_sum = graph.sum() * np.ones(graph.shape, dtype=np.uint32)
-        self.__search(graph)
+        self.__search(graph, down_right_only=True)
 
     def __path_cond(self, node: Node, path: GraphPath) -> bool:
         return False if node in path.path else True
@@ -53,6 +56,7 @@ class MinimumPathFinder:
     def __search(
         self,
         graph: np.ndarray,
+        down_right_only: bool,
         start: Node = [0, 0],
         path: GraphPath = GraphPath([]),
     ) -> list[GraphPath]:
@@ -63,7 +67,7 @@ class MinimumPathFinder:
             self._min_weight_sum[start[0], start[1]] = path.weight_sum
         else:
             return []
-        # cancel if weight is above min_path_weight + remaining distance
+        # cancel if weight_weight is above self.weight_sum + remaining distance
         if self.weight_sum is not None and path.weight_sum + dist_to_end >= self.weight_sum:
             return []
         if start == (graph.shape[0] - 1, graph.shape[1] - 1):
@@ -72,10 +76,10 @@ class MinimumPathFinder:
             self.path
             return [path]
         paths = []
-        neighbors = get_nearest_neighbor_locations(*start, shape=graph.shape)
+        neighbors = get_nearest_neighbor_locations(*start, graph.shape, down_right_only)
         for neighbor in zip(*neighbors):
             if self.__path_cond(node=neighbor, path=path):
-                [paths.append(p) for p in self.__search(graph, neighbor, path)]
+                [paths.append(p) for p in self.__search(graph, down_right_only, neighbor, path)]
         return paths
 
 
