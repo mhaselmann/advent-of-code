@@ -46,7 +46,7 @@ class MinimumPathFinder:
         self.path: Optional[list[Node]] = None
         self.__search(graph)
 
-    def path_cond(self, node: Node, path: GraphPath) -> bool:
+    def __path_cond(self, node: Node, path: GraphPath) -> bool:
         return False if node in path.path else True
 
     def __search(
@@ -68,37 +68,9 @@ class MinimumPathFinder:
         paths = []
         neighbors = get_nearest_neighbor_locations(*start, shape=graph.shape)
         for neighbor in zip(*neighbors):
-            if self.path_cond(node=neighbor, path=path):
+            if self.__path_cond(node=neighbor, path=path):
                 [paths.append(p) for p in self.__search(graph, neighbor, path)]
         return paths
-
-
-def find_all_paths(
-    graph: np.ndarray,
-    path_cond: Callable[[Node, GraphPath], bool],
-    start: Node = [0, 0],
-    path: GraphPath = GraphPath([]),
-) -> list[GraphPath]:
-    global min_path_weight
-    path = GraphPath(path=path.path + [start], weight=path.weight + graph[start[0], start[1]])
-    # cancel path traversing if weight is above min_path_weight
-    dist_to_end = graph.shape[0] - 1 - start[0] + graph.shape[1] - 1 - start[1]
-    if min_path_weight is not None and path.weight + dist_to_end >= min_path_weight:
-        return []
-    if start == (graph.shape[0] - 1, graph.shape[1] - 1):
-        print("HERE", path.weight, min_path_weight)
-        min_path_weight = path.weight
-        return [path]
-    paths = []
-    neighbors = get_nearest_neighbor_locations(*start, shape=graph.shape)
-    for neighbor in zip(*neighbors):
-        if path_cond(node=neighbor, path=path):
-            [paths.append(p) for p in find_all_paths(graph, path_cond, neighbor, path)]
-    return paths
-
-
-def get_minimum_path(paths: list[GraphPath]) -> GraphPath:
-    return min(paths.items(), key=lambda x: x[1])
 
 
 if __name__ == "__main__":
