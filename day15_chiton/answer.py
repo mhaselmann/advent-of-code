@@ -24,7 +24,7 @@ def parse_input_file(path: Path) -> np.ndarray:
 
 
 def get_nearest_neighbor_locations(
-    row: int, col: int, shape: tuple[int, int], down_right_only: bool = False
+    row: int, col: int, graph: np.ndarray, down_right_only: bool = False
 ) -> tuple[list[int], list[int]]:  # list of rows, list of columns
     # priotize down and left moves to priotize short paths
     if down_right_only:
@@ -34,12 +34,16 @@ def get_nearest_neighbor_locations(
     for idx in reversed(range(len(nn_rows))):
         if nn_rows[idx] < 0:
             nn_rows.pop(idx), nn_cols.pop(idx)
-        elif nn_rows[idx] > shape[0] - 1:
+        elif nn_rows[idx] > graph.shape[0] - 1:
             nn_rows.pop(idx), nn_cols.pop(idx)
         elif nn_cols[idx] < 0:
             nn_rows.pop(idx), nn_cols.pop(idx)
-        elif nn_cols[idx] > shape[1] - 1:
+        elif nn_cols[idx] > graph.shape[1] - 1:
             nn_rows.pop(idx), nn_cols.pop(idx)
+    # sort neighbors according to their weight
+    indices = np.argsort(graph[nn_rows, nn_cols])
+    nn_rows = [nn_rows[i] for i in indices]
+    nn_cols = [nn_cols[i] for i in indices]
     return nn_rows, nn_cols
 
 
@@ -76,7 +80,7 @@ class MinimumPathFinder:
             self.path
             return [path]
         paths = []
-        neighbors = get_nearest_neighbor_locations(*start, graph.shape, down_right_only)
+        neighbors = get_nearest_neighbor_locations(*start, graph, down_right_only)
         for neighbor in zip(*neighbors):
             if self.__path_cond(node=neighbor, path=path):
                 [paths.append(p) for p in self.__search(graph, down_right_only, neighbor, path)]
