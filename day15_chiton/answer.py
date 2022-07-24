@@ -1,11 +1,12 @@
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 
 
+min_path_weight: Optional[int] = None  # global variable
 Node = tuple[int, int]
 
 
@@ -54,8 +55,14 @@ def find_all_paths(
     start: Node = [0, 0],
     path: GraphPath = GraphPath([]),
 ) -> list[GraphPath]:
+    global min_path_weight
     path = GraphPath(path=path.path + [start], weight=path.weight + graph[start[0], start[1]])
+    # cancel path traversing if weight is above min_path_weight
+    if min_path_weight is not None and path.weight > min_path_weight:
+        return []
     if start == (graph.shape[0] - 1, graph.shape[1] - 1):
+        print("HERE", path, path.weight, min_path_weight)
+        min_path_weight = path.weight
         return [path]
     paths = []
     neighbors = get_nearest_neighbor_locations(*start, shape=graph.shape)
@@ -82,4 +89,4 @@ if __name__ == "__main__":
     paths = find_all_paths(graph=graph, path_cond=path_cond)
     minimum_path = min(paths, key=lambda x: x.weight)
     print(len(paths), minimum_path)
-    print(f"Answer part1: Minimal risk path's risk: {minimum_path.weight}")
+    print(f"Answer part1: Minimal risk path's risk: {minimum_path.weight-1}")
