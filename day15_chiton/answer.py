@@ -53,6 +53,8 @@ class MinimumPathFinder:
         self.path: Optional[list[Node]] = None
         self._min_weight_sum = graph.sum() * np.ones(graph.shape, dtype=np.uint32)
         self.__search(graph, down_right_only=True)
+        print(f"Down/Right movement search finished - Min. weight sum: {self.weight_sum - 1}")
+        self.__search(graph, down_right_only=False)
 
     def __path_cond(self, node: Node, path: GraphPath) -> bool:
         return False if node in path.path else True
@@ -75,9 +77,9 @@ class MinimumPathFinder:
         if self.weight_sum is not None and path.weight_sum + dist_to_end >= self.weight_sum:
             return []
         if start == (graph.shape[0] - 1, graph.shape[1] - 1):
-            print("HERE", path.weight_sum, self.weight_sum)
             self.weight_sum = path.weight_sum
             self.path
+            print(f"{self.weight_sum - 1}")
             return [path]
         paths = []
         neighbors = get_nearest_neighbor_locations(*start, graph, down_right_only)
@@ -98,6 +100,4 @@ if __name__ == "__main__":
     print(graph)
 
     min_path_finder = MinimumPathFinder(graph)
-    # minimum_path = min(paths, key=lambda x: x.weight)
-    print(min_path_finder.weight_sum)
     print(f"Answer part1: Minimal risk path's risk: {min_path_finder.weight_sum-1}")
