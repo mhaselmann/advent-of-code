@@ -1,9 +1,13 @@
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
+import sys
+import time
 from typing import Callable, Optional
 
 import numpy as np
+
+sys.setrecursionlimit(2000)
 
 
 Node = tuple[int, int]
@@ -21,6 +25,19 @@ def parse_input_file(path: Path) -> np.ndarray:
         for line in f:
             rows.append([int(x) for x in line if x.isnumeric()])
     return np.array(rows, dtype=np.uint8)
+
+
+def incr_array(array: np.ndarray, incr: int = 1, min_val: int = 1, max_val: int = 9) -> np.ndarray:
+    new_array = array.copy()
+    for _ in range(incr):
+        new_array = new_array + 1
+        new_array[new_array > max_val] = min_val
+    return new_array
+
+
+def get_graph_mxn(graph: np.ndarray, m: int, n: int):
+    graph_5x5 = np.concatenate([incr_array(graph, i) for i in range(m)], axis=0)
+    return np.concatenate([incr_array(graph_5x5, i) for i in range(n)], axis=1)
 
 
 def get_nearest_neighbor_locations(
@@ -52,6 +69,7 @@ class MinimumPathFinder:
         self.weight_sum: Optional[int] = None
         self.path: Optional[list[Node]] = None
         self._min_weight_sum = graph.sum() * np.ones(graph.shape, dtype=np.uint32)
+        self.end = (graph.shape[0] - 1, graph.shape[1] - 1)
         self.__search(graph, down_right_only=True)
         print(f"Down/Right movement search finished - Min. weight sum: {self.weight_sum - 1}")
         self.__search(graph, down_right_only=False)
@@ -76,7 +94,7 @@ class MinimumPathFinder:
         # cancel if weight_weight is above self.weight_sum + remaining distance
         if self.weight_sum is not None and path.weight_sum + dist_to_end >= self.weight_sum:
             return []
-        if start == (graph.shape[0] - 1, graph.shape[1] - 1):
+        if start == self.end:
             self.weight_sum = path.weight_sum
             self.path
             print(f"{self.weight_sum - 1}")
@@ -99,5 +117,12 @@ if __name__ == "__main__":
     graph = parse_input_file(file_path)
     print(graph)
 
-    min_path_finder = MinimumPathFinder(graph)
+    # t0 = time.time()
+    # min_path_finder = MinimumPathFinder(graph)
+    # print(f"Answer part1: Minimal risk path's risk: {min_path_finder.weight_sum-1}")
+    # print(time.time() - t0)
+
+    t0 = time.time()
+    min_path_finder = MinimumPathFinder(get_graph_mxn(graph, 5, 5))
     print(f"Answer part1: Minimal risk path's risk: {min_path_finder.weight_sum-1}")
+    print(time.time() - t0)

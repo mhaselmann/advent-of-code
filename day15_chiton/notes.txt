@@ -1,0 +1,6 @@
+Complexity must be #Edges + #Nodes * log(#Nodes)  --> https://stackabuse.com/courses/graphs-in-python-theory-and-implementation/lessons/dijkstras-algorithm/
+graph_5x5/graph = 30 x (6 min for graph with old algorithm)
+current algorithm is original's intention was to find all paths (or number of all paths)
+look up djikstras algorithm
+preallocate everything (lower_cost_boundary for each node (unique extra condition for this problem), sorted nearest neighbors according to cost) --> use heapq for further acceleration
+further tips: https://codereview.stackexchange.com/questions/235898/speeding-up-dijkstras-algorithm
