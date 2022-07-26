@@ -31,7 +31,6 @@ def path_cond_part2(node: str, path: list[str]) -> bool:
     return True
 
 
-# Dijkstra's Algorithm  https://stackoverflow.com/questions/24471136/how-to-find-all-paths-between-two-graph-nodes
 def find_all_paths(
     graph: dict[str, list[str]],
     path_cond: Callable[[str, list[str]], bool],
