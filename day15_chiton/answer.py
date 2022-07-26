@@ -1,5 +1,6 @@
 import argparse
 from dataclasses import dataclass
+from heapq import heappush, heappop
 from pathlib import Path
 import sys
 import time
@@ -35,76 +36,56 @@ def incr_array(array: np.ndarray, incr: int = 1, min_val: int = 1, max_val: int 
     return new_array
 
 
-def get_graph_mxn(graph: np.ndarray, m: int, n: int):
-    graph_5x5 = np.concatenate([incr_array(graph, i) for i in range(m)], axis=0)
-    return np.concatenate([incr_array(graph_5x5, i) for i in range(n)], axis=1)
+def get_array_mxn(array: np.ndarray, m: int, n: int):
+    array_5x5 = np.concatenate([incr_array(array, i) for i in range(m)], axis=0)
+    return np.concatenate([incr_array(array_5x5, i) for i in range(n)], axis=1)
 
 
-def get_nearest_neighbor_locations(
-    row: int, col: int, graph: np.ndarray, down_right_only: bool = False
-) -> tuple[list[int], list[int]]:  # list of rows, list of columns
-    # priotize down and left moves to priotize short paths
-    if down_right_only:
-        nn_rows, nn_cols = [row + 1, row], [col, col + 1]
-    else:
-        nn_rows, nn_cols = [row + 1, row, row - 1, row], [col, col + 1, col, col - 1]
-    for idx in reversed(range(len(nn_rows))):
-        if nn_rows[idx] < 0:
-            nn_rows.pop(idx), nn_cols.pop(idx)
-        elif nn_rows[idx] > graph.shape[0] - 1:
-            nn_rows.pop(idx), nn_cols.pop(idx)
-        elif nn_cols[idx] < 0:
-            nn_rows.pop(idx), nn_cols.pop(idx)
-        elif nn_cols[idx] > graph.shape[1] - 1:
-            nn_rows.pop(idx), nn_cols.pop(idx)
-    # sort neighbors according to their weight
-    indices = np.argsort(graph[nn_rows, nn_cols])
-    nn_rows = [nn_rows[i] for i in indices]
-    nn_cols = [nn_cols[i] for i in indices]
-    return nn_rows, nn_cols
+def get_unvisited_neighbors(row: int, col: int, visited: np.ndarray) -> list[tuple[int, int]]:
+    neighbors = [(row + 1, col), (row, col + 1), (row - 1, col), (row, col - 1)]
+    for idx in reversed(range(4)):
+        if neighbors[idx][0] < 0:
+            neighbors.pop(idx)
+        elif neighbors[idx][0] > visited.shape[0] - 1:
+            neighbors.pop(idx)
+        elif neighbors[idx][1] < 0:
+            neighbors.pop(idx)
+        elif neighbors[idx][1] > visited.shape[1] - 1:
+            neighbors.pop(idx)
+        elif visited[neighbors[idx][0], neighbors[idx][1]]:
+            neighbors.pop(idx)
+    return neighbors
 
 
-class MinimumPathFinder:
-    def __init__(self, graph: np.ndarray):
-        self.weight_sum: Optional[int] = None
-        self.path: Optional[list[Node]] = None
-        self._min_weight_sum = graph.sum() * np.ones(graph.shape, dtype=np.uint32)
-        self.end = (graph.shape[0] - 1, graph.shape[1] - 1)
-        self.__search(graph, down_right_only=True)
-        print(f"Down/Right movement search finished - Min. weight sum: {self.weight_sum - 1}")
-        self.__search(graph, down_right_only=False)
+def resolve_negative_indices(ind: tuple[int, ...], shape: tuple[int, ...]) -> tuple[int, ...]:
+    return tuple([shape[d] + ind[d] if ind[d] < 0 else ind[d] for d in range(len(ind))])
 
-    def __path_cond(self, node: Node, path: GraphPath) -> bool:
-        return False if node in path.path else True
 
-    def __search(
-        self,
-        graph: np.ndarray,
-        down_right_only: bool,
-        start: Node = [0, 0],
-        path: GraphPath = GraphPath([]),
-    ) -> list[GraphPath]:
-        path = GraphPath(path.path + [start], path.weight_sum + graph[start[0], start[1]])
-        dist_to_end = graph.shape[0] - 1 - start[0] + graph.shape[1] - 1 - start[1]
-        # cancel if current weight is larger as self._min_weight_sum at start point
-        if path.weight_sum <= self._min_weight_sum[start[0], start[1]]:
-            self._min_weight_sum[start[0], start[1]] = path.weight_sum
-        else:
-            return []
-        # cancel if weight_weight is above self.weight_sum + remaining distance
-        if self.weight_sum is not None and path.weight_sum + dist_to_end >= self.weight_sum:
-            return []
-        if start == self.end:
-            self.weight_sum = path.weight_sum
-            self.path
-            print(f"{self.weight_sum - 1}")
-            return [path]
-        paths = []
-        neighbors = get_nearest_neighbor_locations(*start, graph, down_right_only)
-        for neighbor in zip(*neighbors):
-            if self.__path_cond(node=neighbor, path=path):
-                [paths.append(p) for p in self.__search(graph, down_right_only, neighbor, path)]
-        return paths
+def find_shortest_path_cost(
+    weights: np.ndarray, start: tuple[int, int] = (0, 0), end: tuple[int, int] = (-1, -1)
+) -> Optional[int]:
+    """
+    Dijkstras algorithm for searching the shortest path's cost
+    """
+    start = resolve_negative_indices(start, weights.shape)
+    end = resolve_negative_indices(end, weights.shape)
+    costs = 4294967295 * np.ones(weights.shape, np.uint32)
+    costs[start[0], start[1]] = 0  # except for start node which is 0
+    visited = np.zeros(weights.shape, bool)
+    pq = []  # priority queue
+    heappush(pq, (costs[start[0], start[1]], start))
+    while len(pq):
+        cost, node = heappop(pq)
+        if node == end:
+            return costs[node[0], node[1]]
+        cost = costs[node[0], node[1]]
+        visited[start[0], start[1]] = True
+        for nb in get_unvisited_neighbors(*node, visited):
+            new_nb_cost = cost + weights[nb[0], nb[1]]
+            if new_nb_cost < costs[nb[0], nb[1]]:
+                costs[nb[0], nb[1]] = new_nb_cost
+                heappush(pq, (new_nb_cost, nb))
+    print("Error: path not found", node)
 
 
 if __name__ == "__main__":
@@ -114,15 +95,12 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("example_input.txt")
     assert file_path.exists()
 
-    graph = parse_input_file(file_path)
-    print(graph)
-
-    # t0 = time.time()
-    # min_path_finder = MinimumPathFinder(graph)
-    # print(f"Answer part1: Minimal risk path's risk: {min_path_finder.weight_sum-1}")
-    # print(time.time() - t0)
+    weights = parse_input_file(file_path)
 
     t0 = time.time()
-    min_path_finder = MinimumPathFinder(get_graph_mxn(graph, 5, 5))
-    print(f"Answer part1: Minimal risk path's risk: {min_path_finder.weight_sum-1}")
-    print(time.time() - t0)
+    cost = find_shortest_path_cost(weights)
+    print(f"Answer part1 after {time.time() - t0}s: Shortest path's cost: {cost}")
+
+    t0 = time.time()
+    cost = find_shortest_path_cost(get_array_mxn(weights, 5, 5))
+    print(f"Answer part2 after {time.time() - t0}s: Shortest path's cost: {cost}")
