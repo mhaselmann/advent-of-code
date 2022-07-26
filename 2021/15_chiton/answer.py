@@ -1,23 +1,13 @@
 import argparse
-from dataclasses import dataclass
 from heapq import heappush, heappop
 from pathlib import Path
-import sys
 import time
-from typing import Callable, Optional
+from typing import Optional
 
 import numpy as np
 
-sys.setrecursionlimit(2000)
-
 
 Node = tuple[int, int]
-
-
-@dataclass
-class GraphPath:
-    path: list[Node]
-    weight_sum: int = 0
 
 
 def parse_input_file(path: Path) -> np.ndarray:
@@ -41,8 +31,13 @@ def get_array_mxn(array: np.ndarray, m: int, n: int):
     return np.concatenate([incr_array(array_5x5, i) for i in range(n)], axis=1)
 
 
-def get_unvisited_neighbors(row: int, col: int, visited: np.ndarray) -> list[tuple[int, int]]:
-    neighbors = [(row + 1, col), (row, col + 1), (row - 1, col), (row, col - 1)]
+def get_unvisited_neighbors(node: Node, visited: np.ndarray) -> list[Node]:
+    neighbors = [
+        (node[0] + 1, node[1]),
+        (node[0], node[1] + 1),
+        (node[0] - 1, node[1]),
+        (node[0], node[1] - 1),
+    ]
     for idx in reversed(range(4)):
         if neighbors[idx][0] < 0:
             neighbors.pop(idx)
@@ -62,7 +57,7 @@ def resolve_negative_indices(ind: tuple[int, ...], shape: tuple[int, ...]) -> tu
 
 
 def find_shortest_path_cost(
-    weights: np.ndarray, start: tuple[int, int] = (0, 0), end: tuple[int, int] = (-1, -1)
+    weights: np.ndarray, start: Node = (0, 0), end: Node = (-1, -1)
 ) -> Optional[int]:
     """
     Dijkstras algorithm for searching the shortest path's cost
@@ -80,12 +75,12 @@ def find_shortest_path_cost(
             return costs[node[0], node[1]]
         cost = costs[node[0], node[1]]
         visited[start[0], start[1]] = True
-        for nb in get_unvisited_neighbors(*node, visited):
+        for nb in get_unvisited_neighbors(node, visited):
             new_nb_cost = cost + weights[nb[0], nb[1]]
             if new_nb_cost < costs[nb[0], nb[1]]:
                 costs[nb[0], nb[1]] = new_nb_cost
                 heappush(pq, (new_nb_cost, nb))
-    print("Error: path not found", node)
+    print(f"ERROR: Path not found. Last node: {node}")
 
 
 if __name__ == "__main__":
