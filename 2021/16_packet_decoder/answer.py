@@ -1,4 +1,5 @@
 import argparse
+import copy
 from pathlib import Path
 
 
@@ -11,38 +12,49 @@ def decode_hex_message_to_binary(file_path: Path) -> str:
     return "".join(groups)
 
 
-def split_binary_msg_into_packages(message: str):
-    packages = list()
-    bit = 0
-    while bit < len(message):
-        number_bits = []
-        version = int(message[bit : bit + 3], base=2)
-        type_id = int(message[bit + 3 : bit + 6], base=2)
-        if type_id == 4:
+def split_binary_msg_into_packages(msg: str, bit: int = 0):
+    packages = []
+    while bit < len(msg):
+        print("A")
+        try:
+            version = int(msg[bit : bit + 3], base=2)
+            type_id = int(msg[bit + 3 : bit + 6], base=2)
+            print(
+                "NEW PACKAGE: ",
+                bit,
+                msg[bit : bit + 6],
+                int(msg[bit : bit + 3], base=2),
+                int(msg[bit + 3 : bit + 6], base=2),
+            )
+        except ValueError:
+            return packages, bit
+        if version == 0 and type_id == 0:
+            return packages, bit
+        packages.append(
+            {
+                "version": version,
+                "type_id": type_id,
+            }
+        )
+        if packages[-1]["type_id"] == 4:
+            literal_value_bits = []
             keep_read = True
             bit += 6
             while keep_read:
-                keep_read = True if message[bit] == "1" else False
-                number_bits.append(message[bit + 1 : bit + 5])
+                keep_read = True if msg[bit] == "1" else False
+                literal_value_bits.append(msg[bit + 1 : bit + 5])
                 bit += 5
-            packages.append(
-                {
-                    "version": version,
-                    "type_id": type_id,
-                    "number": int("".join(number_bits), base=2),
-                }
-            )
-            package_rest = bit % 4
-            if package_rest > 0:
-                bit += 4 - bit % 4
+                packages[-1]["number"] = int("".join(literal_value_bits), base=2)
         else:
-            length_type_id = message[bit + 6]
-            bit += 6
-            if length_type_id == "0":
-                subpackage_length = int(message[bit : bit + 15], 2)
+            packages[-1]["type_length_id"] = msg[bit + 6]
+            bit += 7
+            if packages[-1]["type_length_id"] == "0":
+                print(packages, msg, bit)
+                packages[-1]["subpackage_length"] = int(msg[bit : bit + 15], 2)
+                print("BBBBBBB", msg[bit : bit + 15], int(msg[bit : bit + 15], 2), packages)
                 bit += 15
-
-        print(packages)
+                packages[-1]["subpackages"], bit = split_binary_msg_into_packages(msg, bit)
+    return packages, bit
 
 
 if __name__ == "__main__":
@@ -54,4 +66,5 @@ if __name__ == "__main__":
 
     message = decode_hex_message_to_binary(file_path)
     print(message)
-    split_binary_msg_into_packages(message)
+    packages, bit = split_binary_msg_into_packages(message, 0)
+    print("\n\n\n", packages)
