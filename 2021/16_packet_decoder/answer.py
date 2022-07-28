@@ -18,21 +18,9 @@ def decode_hex_message_to_binary(file_path: Path) -> str:
 def split_binary_msg_into_packages(msg: str, bit: int = 0, n_subpackages: Optional[int] = None):
     global VERSION_SUM
     packages = []
-    while bit < len(msg):
-        try:
-            version = int(msg[bit : bit + 3], base=2)
-            type_id = int(msg[bit + 3 : bit + 6], base=2)
-            # print(
-            #     "NEW PACKAGE: ",
-            #     bit,
-            #     msg[bit : bit + 6],
-            #     int(msg[bit : bit + 3], base=2),
-            #     int(msg[bit + 3 : bit + 6], base=2),
-            # )
-        except ValueError:
-            return packages, bit
-        if version == 0 and type_id == 0:
-            return packages, bit
+    while bit + 8 < len(msg):
+        version = int(msg[bit : bit + 3], base=2)
+        type_id = int(msg[bit + 3 : bit + 6], base=2)
         VERSION_SUM += version
         packages.append(
             {
