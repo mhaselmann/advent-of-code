@@ -19,16 +19,14 @@ def split_binary_msg_into_packages(msg: str, bit: int = 0, n_subpackages: Option
     global VERSION_SUM
     packages = []
     while bit + 8 < len(msg):
-        version = int(msg[bit : bit + 3], base=2)
-        type_id = int(msg[bit + 3 : bit + 6], base=2)
-        VERSION_SUM += version
         packages.append(
             {
-                "version": version,
-                "type_id": type_id,
+                "version": int(msg[bit : bit + 3], base=2),
+                "type_id": int(msg[bit + 3 : bit + 6], base=2),
             }
         )
-        if packages[-1]["type_id"] == 4:
+        VERSION_SUM += packages[-1]["version"]
+        if packages[-1]["type_id"] == 4:  # literal value package
             literal_value_bits = []
             keep_read = True
             bit += 6
@@ -37,7 +35,7 @@ def split_binary_msg_into_packages(msg: str, bit: int = 0, n_subpackages: Option
                 literal_value_bits.append(msg[bit + 1 : bit + 5])
                 bit += 5
                 packages[-1]["number"] = int("".join(literal_value_bits), base=2)
-        else:
+        else:  # operator package
             packages[-1]["type_length_id"] = msg[bit + 6]
             bit += 7
             if packages[-1]["type_length_id"] == "0":
@@ -50,7 +48,7 @@ def split_binary_msg_into_packages(msg: str, bit: int = 0, n_subpackages: Option
                 packages[-1]["subpackages"], bit = split_binary_msg_into_packages(
                     msg, bit, packages[-1]["n_subpackages"]
                 )
-        if n_subpackages:
+        if n_subpackages:  # in case parent is operator package with fixed number of subpackages
             n_subpackages += 1
             if len(packages) >= n_subpackages:
                 return packages, bit
