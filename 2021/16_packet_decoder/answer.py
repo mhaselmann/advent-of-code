@@ -17,11 +17,17 @@ def decode_binary_message_from_file(file_path: Path) -> str:
     return "".join(groups)
 
 
-def parse_packages(msg: str, bit: int = 0, n_subpackages: Optional[int] = None) -> list[Package]:
+def parse_packages(
+    msg: str,
+    bit: int = 0,
+    n_subpackages: Optional[int] = None,
+    subpackage_length: Optional[int] = None,
+) -> list[Package]:
     """
     Parse packages from binary message "msg" and returns list of packages
     """
     packages = []
+    start_bit = bit
     while bit + 8 < len(msg):
         packages.append(
             {
@@ -45,20 +51,25 @@ def parse_packages(msg: str, bit: int = 0, n_subpackages: Optional[int] = None) 
             if packages[-1]["type_length_id"] == "0":  # fixed length subpackages
                 packages[-1]["subpackage_length"] = int(msg[bit : bit + 15], 2)
                 bit += 15
-                packages[-1]["subpackages"], bit = parse_packages(msg, bit)
+                packages[-1]["subpackages"], bit = parse_packages(
+                    msg, bit, subpackage_length=packages[-1]["subpackage_length"]
+                )
                 # print("\n \n HERE111111: ", packages[-1])
             else:  # fixed number of subpackages
                 packages[-1]["n_subpackages"] = int(msg[bit : bit + 11], 2)
                 bit += 11
                 print("\n \n preHERE22: ", packages, packages[-1]["n_subpackages"])
                 packages[-1]["subpackages"], bit = parse_packages(
-                    msg, bit, packages[-1]["n_subpackages"]
+                    msg, bit, n_subpackages=packages[-1]["n_subpackages"]
                 )
                 print("\n \n HERE222222: ", packages[-1])
         if (
             n_subpackages and len(packages) >= n_subpackages
         ):  # in case parent is operator package with fixed number of subpackages
             print("CCCCCCCCCCCCCCCCCCCC", len(packages), packages, n_subpackages)
+            return packages, bit
+        if subpackage_length and bit >= start_bit + subpackage_length:
+            print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
             return packages, bit
     return packages, bit
 
