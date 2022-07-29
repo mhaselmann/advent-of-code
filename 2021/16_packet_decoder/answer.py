@@ -5,37 +5,35 @@ from pathlib import Path
 from typing import Optional
 
 
-Package = dict[str, int | list["Package"]]
+Packet = dict[str, int | list["Packet"]]
+SUM, PROD, MIN, MAX, LITERAL, GT, LT, EQ = range(8)
 
 
-def decode_binary_message_from_file(file_path: Path) -> str:
+def get_binary_msg_from_file(file_path: Path) -> str:
     with open(file_path) as f:
-        message_hex = f.readline()
-    groups = list()
-    for number_hex in message_hex:
-        groups.append(str(bin(int(number_hex, base=16)))[2:].zfill(4))
-    return "".join(groups)
+        msg_hex = f.readline()
+    return "".join([str(bin(int(n, base=16)))[2:].zfill(4) for n in msg_hex])
 
 
-def parse_packages(
+def decode_binary_msg(
     msg: str,
     _bit: int = 0,
-    _n_subpackages: Optional[int] = None,
-    _subpackage_length: Optional[int] = None,
-) -> list[Package]:
+    _n_sps: Optional[int] = None,
+    _sps_len: Optional[int] = None,
+) -> list[Packet]:
     """
-    Parse packages from binary message "msg" and returns list of packages
+    Parse packets from binary message "msg" and returns list of packets
     """
-    packages = []
+    packets = []
     start_bit = _bit
     while _bit + 8 < len(msg):
-        packages.append(
+        packets.append(
             {
                 "version": int(msg[_bit : _bit + 3], base=2),
                 "type_id": int(msg[_bit + 3 : _bit + 6], base=2),
             }
         )
-        if packages[-1]["type_id"] == 4:  # literal value package
+        if packets[-1]["type_id"] == LITERAL:  # literal value package
             literal_value_bits = []
             keep_read = True
             _bit += 6
@@ -43,63 +41,62 @@ def parse_packages(
                 keep_read = True if msg[_bit] == "1" else False
                 literal_value_bits.append(msg[_bit + 1 : _bit + 5])
                 _bit += 5
-                packages[-1]["number"] = int("".join(literal_value_bits), base=2)
+                packets[-1]["number"] = int("".join(literal_value_bits), base=2)
         else:  # operator package
-            packages[-1]["type_length_id"] = msg[_bit + 6]
+            packets[-1]["type_len_id"] = msg[_bit + 6]
             _bit += 7
-            if packages[-1]["type_length_id"] == "0":  # fixed length subpackages
-                packages[-1]["subpackage_length"] = int(msg[_bit : _bit + 15], 2)
+            if packets[-1]["type_len_id"] == "0":  # fixed length sps
+                packets[-1]["sps_len"] = int(msg[_bit : _bit + 15], 2)
                 _bit += 15
-                packages[-1]["subpackages"], _bit = parse_packages(
-                    msg, _bit, _subpackage_length=packages[-1]["subpackage_length"]
+                packets[-1]["sps"], _bit = decode_binary_msg(
+                    msg, _bit, _sps_len=packets[-1]["sps_len"]
                 )
-            else:  # fixed number of subpackages
-                packages[-1]["n_subpackages"] = int(msg[_bit : _bit + 11], 2)
+            else:  # fixed number of sps
+                packets[-1]["n_sps"] = int(msg[_bit : _bit + 11], 2)
                 _bit += 11
-                packages[-1]["subpackages"], _bit = parse_packages(
-                    msg, _bit, _n_subpackages=packages[-1]["n_subpackages"]
+                packets[-1]["sps"], _bit = decode_binary_msg(
+                    msg, _bit, _n_sps=packets[-1]["n_sps"]
                 )
-        # check return conditions in case of subpackages
-        if _n_subpackages and len(packages) >= _n_subpackages:  # parent type_id == 1
-            return packages, _bit
-        elif _subpackage_length and _bit >= start_bit + _subpackage_length:  # parent type_id == 0
-            return packages, _bit
-    return packages
+        # check return conditions in case of sps
+        if _n_sps and len(packets) >= _n_sps:  # parent type_id == 1
+            return packets, _bit
+        elif _sps_len and _bit >= start_bit + _sps_len:  # parent type_id == 0
+            return packets, _bit
+    return packets
 
 
-def version_sum(packages: list[Package], _counter=0) -> int:
-    for package in packages:
-        _counter += package["version"]
-        if "subpackages" in package:
-            _counter += version_sum(package["subpackages"])
+def version_sum(packets: list[Packet], _counter=0) -> int:
+    for packet in packets:
+        _counter += packet["version"]
+        if "sps" in packet:
+            _counter += version_sum(packet["sps"])
     return _counter
 
 
-def calculate_expressions(packages: list[Package]) -> list[int]:
-    results = []
-    for package in packages:
-        if package["type_id"] == 4:  # literal value package
-            results.append(package["number"])
-        else:  # operator packages
-            subpackages_results = calculate_expressions(package["subpackages"])
-            if package["type_id"] == 0:  # sum operator
-                results.append(sum(subpackages_results))
-            elif package["type_id"] == 1:  # product operator
-                results.append(functools.reduce(operator.mul, subpackages_results))
-            elif package["type_id"] == 2:  # min operator
-                results.append(min(subpackages_results))
-            elif package["type_id"] == 3:  # max operator
-                results.append(max(subpackages_results))
-            elif package["type_id"] == 5:  # greater than
-                assert len(subpackages_results) == 2, f"{package} >"
-                results.append(1 if subpackages_results[0] > subpackages_results[1] else 0)
-            elif package["type_id"] == 6:  # less than
-                assert len(subpackages_results) == 2, f"{package} <"
-                results.append(1 if subpackages_results[0] < subpackages_results[1] else 0)
-            elif package["type_id"] == 7:  # equal to
-                assert len(subpackages_results) == 2, f"{package} =="
-                results.append(1 if subpackages_results[0] == subpackages_results[1] else 0)
-    return results
+def calc_packet_expr(packets: list[Packet]) -> list[int]:
+    res = []
+    for packet in packets:
+        if packet["type_id"] == LITERAL:  # literal value packet
+            res.append(packet["number"])
+        else:  # operator packets
+            sps_res = calc_packet_expr(packet["sps"])
+            if packet["type_id"] in [GT, LT, EQ]:
+                assert len(sps_res) == 2
+            if packet["type_id"] == SUM:
+                res.append(sum(sps_res))
+            elif packet["type_id"] == PROD:
+                res.append(functools.reduce(operator.mul, sps_res))
+            elif packet["type_id"] == MIN:
+                res.append(min(sps_res))
+            elif packet["type_id"] == MAX:
+                res.append(max(sps_res))
+            elif packet["type_id"] == GT:
+                res.append(1 if sps_res[0] > sps_res[1] else 0)
+            elif packet["type_id"] == LT:
+                res.append(1 if sps_res[0] < sps_res[1] else 0)
+            elif packet["type_id"] == EQ:
+                res.append(1 if sps_res[0] == sps_res[1] else 0)
+    return res
 
 
 if __name__ == "__main__":
@@ -109,7 +106,7 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("example_input.txt")
     assert file_path.exists()
 
-    message = decode_binary_message_from_file(file_path)
-    packages = parse_packages(message)
-    print(f"Answer part 1: Sum of all package/subpackage versions: {version_sum(packages)}")
-    print(f"Answer part 2: Expression's result: {calculate_expressions(packages)[0]}")
+    message = get_binary_msg_from_file(file_path)
+    packets = decode_binary_msg(message)
+    print(f"Answer part 1: Version sum: {version_sum(packets)}")
+    print(f"Answer part 2: Expression result: {calc_packet_expr(packets)[0]}")
