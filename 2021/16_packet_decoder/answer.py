@@ -2,10 +2,10 @@ import argparse
 import functools
 import operator
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 
-Package = dict[str, Union[int, list["Package"]]]
+Package = dict[str, int | list["Package"]]
 
 
 def decode_binary_message_from_file(file_path: Path) -> str:
@@ -19,67 +19,60 @@ def decode_binary_message_from_file(file_path: Path) -> str:
 
 def parse_packages(
     msg: str,
-    bit: int = 0,
-    n_subpackages: Optional[int] = None,
-    subpackage_length: Optional[int] = None,
+    _bit: int = 0,
+    _n_subpackages: Optional[int] = None,
+    _subpackage_length: Optional[int] = None,
 ) -> list[Package]:
     """
     Parse packages from binary message "msg" and returns list of packages
     """
     packages = []
-    start_bit = bit
-    while bit + 8 < len(msg):
+    start_bit = _bit
+    while _bit + 8 < len(msg):
         packages.append(
             {
-                "version": int(msg[bit : bit + 3], base=2),
-                "type_id": int(msg[bit + 3 : bit + 6], base=2),
+                "version": int(msg[_bit : _bit + 3], base=2),
+                "type_id": int(msg[_bit + 3 : _bit + 6], base=2),
             }
         )
-        print("NEW SUBPACKAGE", packages, n_subpackages)
         if packages[-1]["type_id"] == 4:  # literal value package
             literal_value_bits = []
             keep_read = True
-            bit += 6
+            _bit += 6
             while keep_read:
-                keep_read = True if msg[bit] == "1" else False
-                literal_value_bits.append(msg[bit + 1 : bit + 5])
-                bit += 5
+                keep_read = True if msg[_bit] == "1" else False
+                literal_value_bits.append(msg[_bit + 1 : _bit + 5])
+                _bit += 5
                 packages[-1]["number"] = int("".join(literal_value_bits), base=2)
         else:  # operator package
-            packages[-1]["type_length_id"] = msg[bit + 6]
-            bit += 7
+            packages[-1]["type_length_id"] = msg[_bit + 6]
+            _bit += 7
             if packages[-1]["type_length_id"] == "0":  # fixed length subpackages
-                packages[-1]["subpackage_length"] = int(msg[bit : bit + 15], 2)
-                bit += 15
-                packages[-1]["subpackages"], bit = parse_packages(
-                    msg, bit, subpackage_length=packages[-1]["subpackage_length"]
+                packages[-1]["subpackage_length"] = int(msg[_bit : _bit + 15], 2)
+                _bit += 15
+                packages[-1]["subpackages"], _bit = parse_packages(
+                    msg, _bit, _subpackage_length=packages[-1]["subpackage_length"]
                 )
-                # print("\n \n HERE111111: ", packages[-1])
             else:  # fixed number of subpackages
-                packages[-1]["n_subpackages"] = int(msg[bit : bit + 11], 2)
-                bit += 11
-                print("\n \n preHERE22: ", packages, packages[-1]["n_subpackages"])
-                packages[-1]["subpackages"], bit = parse_packages(
-                    msg, bit, n_subpackages=packages[-1]["n_subpackages"]
+                packages[-1]["n_subpackages"] = int(msg[_bit : _bit + 11], 2)
+                _bit += 11
+                packages[-1]["subpackages"], _bit = parse_packages(
+                    msg, _bit, _n_subpackages=packages[-1]["n_subpackages"]
                 )
-                print("\n \n HERE222222: ", packages[-1])
-        if (
-            n_subpackages and len(packages) >= n_subpackages
-        ):  # in case parent is operator package with fixed number of subpackages
-            print("CCCCCCCCCCCCCCCCCCCC", len(packages), packages, n_subpackages)
-            return packages, bit
-        if subpackage_length and bit >= start_bit + subpackage_length:
-            print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-            return packages, bit
-    return packages, bit
+        # check return conditions in case of subpackages
+        if _n_subpackages and len(packages) >= _n_subpackages:  # parent type_id == 1
+            return packages, _bit
+        elif _subpackage_length and _bit >= start_bit + _subpackage_length:  # parent type_id == 0
+            return packages, _bit
+    return packages
 
 
-def version_sum(packages: list[Package], counter=0) -> int:
+def version_sum(packages: list[Package], _counter=0) -> int:
     for package in packages:
-        counter += package["version"]
+        _counter += package["version"]
         if "subpackages" in package:
-            counter += version_sum(package["subpackages"])
-    return counter
+            _counter += version_sum(package["subpackages"])
+    return _counter
 
 
 def calculate_expressions(packages: list[Package]) -> list[int]:
@@ -117,9 +110,6 @@ if __name__ == "__main__":
     assert file_path.exists()
 
     message = decode_binary_message_from_file(file_path)
-    packages, _ = parse_packages(message)
+    packages = parse_packages(message)
     print(f"Answer part 1: Sum of all package/subpackage versions: {version_sum(packages)}")
-
-    print(packages)
-
-    print(calculate_expressions(packages))
+    print(f"Answer part 2: Expression's result: {calculate_expressions(packages)[0]}")
