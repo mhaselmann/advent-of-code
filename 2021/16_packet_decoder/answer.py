@@ -29,6 +29,7 @@ def parse_packages(msg: str, bit: int = 0, n_subpackages: Optional[int] = None) 
                 "type_id": int(msg[bit + 3 : bit + 6], base=2),
             }
         )
+        print("NEW SUBPACKAGE", packages, n_subpackages)
         if packages[-1]["type_id"] == 4:  # literal value package
             literal_value_bits = []
             keep_read = True
@@ -45,18 +46,20 @@ def parse_packages(msg: str, bit: int = 0, n_subpackages: Optional[int] = None) 
                 packages[-1]["subpackage_length"] = int(msg[bit : bit + 15], 2)
                 bit += 15
                 packages[-1]["subpackages"], bit = parse_packages(msg, bit)
-                print("\n \n HERE111111: ", packages[-1]["subpackages"])
+                # print("\n \n HERE111111: ", packages[-1])
             else:  # fixed number of subpackages
                 packages[-1]["n_subpackages"] = int(msg[bit : bit + 11], 2)
                 bit += 11
+                print("\n \n preHERE22: ", packages, packages[-1]["n_subpackages"])
                 packages[-1]["subpackages"], bit = parse_packages(
                     msg, bit, packages[-1]["n_subpackages"]
                 )
-                print("\n \n HERE222222: ", packages[-1]["subpackages"])
-        if n_subpackages:  # in case parent is operator package with fixed number of subpackages
-            n_subpackages += 1
-            if len(packages) >= n_subpackages:
-                return packages, bit
+                print("\n \n HERE222222: ", packages[-1])
+        if (
+            n_subpackages and len(packages) >= n_subpackages
+        ):  # in case parent is operator package with fixed number of subpackages
+            print("CCCCCCCCCCCCCCCCCCCC", len(packages), packages, n_subpackages)
+            return packages, bit
     return packages, bit
 
 
