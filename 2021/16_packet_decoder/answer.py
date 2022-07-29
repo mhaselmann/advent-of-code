@@ -1,12 +1,21 @@
 import argparse
-import functools
-import operator
+from math import prod
 from pathlib import Path
 from typing import Optional
 
 
 Packet = dict[str, int | list["Packet"]]
+
 SUM, PROD, MIN, MAX, LITERAL, GT, LT, EQ = range(8)
+OPS = {
+    SUM: sum,
+    PROD: prod,
+    MIN: min,
+    MAX: max,
+    GT: lambda x: 1 if x[0] > x[1] else 0,
+    LT: lambda x: 1 if x[0] < x[1] else 0,
+    EQ: lambda x: 1 if x[0] == x[1] else 0,
+}
 
 
 def get_binary_msg_from_file(file_path: Path) -> str:
@@ -80,22 +89,7 @@ def calc_packet_expr(packets: list[Packet]) -> list[int]:
             res.append(packet["number"])
         else:  # operator packets
             sps_res = calc_packet_expr(packet["sps"])
-            if packet["type_id"] in [GT, LT, EQ]:
-                assert len(sps_res) == 2
-            if packet["type_id"] == SUM:
-                res.append(sum(sps_res))
-            elif packet["type_id"] == PROD:
-                res.append(functools.reduce(operator.mul, sps_res))
-            elif packet["type_id"] == MIN:
-                res.append(min(sps_res))
-            elif packet["type_id"] == MAX:
-                res.append(max(sps_res))
-            elif packet["type_id"] == GT:
-                res.append(1 if sps_res[0] > sps_res[1] else 0)
-            elif packet["type_id"] == LT:
-                res.append(1 if sps_res[0] < sps_res[1] else 0)
-            elif packet["type_id"] == EQ:
-                res.append(1 if sps_res[0] == sps_res[1] else 0)
+            res.append(OPS[packet["type_id"]](sps_res))
     return res
 
 
