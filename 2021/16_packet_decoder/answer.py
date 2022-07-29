@@ -1,12 +1,12 @@
 import argparse
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 
-VERSION_SUM = 0
+Package = dict[str, Union[int, list["Package"]]]
 
 
-def decode_hex_message_to_binary(file_path: Path) -> str:
+def decode_binary_message_from_file(file_path: Path) -> str:
     with open(file_path) as f:
         message_hex = f.readline()
     groups = list()
@@ -15,8 +15,10 @@ def decode_hex_message_to_binary(file_path: Path) -> str:
     return "".join(groups)
 
 
-def split_binary_msg_into_packages(msg: str, bit: int = 0, n_subpackages: Optional[int] = None):
-    global VERSION_SUM
+def parse_packages(msg: str, bit: int = 0, n_subpackages: Optional[int] = None) -> list[Package]:
+    """
+    Parse packages from binary message "msg" and returns list of packages
+    """
     packages = []
     while bit + 8 < len(msg):
         packages.append(
@@ -25,7 +27,6 @@ def split_binary_msg_into_packages(msg: str, bit: int = 0, n_subpackages: Option
                 "type_id": int(msg[bit + 3 : bit + 6], base=2),
             }
         )
-        VERSION_SUM += packages[-1]["version"]
         if packages[-1]["type_id"] == 4:  # literal value package
             literal_value_bits = []
             keep_read = True
@@ -38,14 +39,14 @@ def split_binary_msg_into_packages(msg: str, bit: int = 0, n_subpackages: Option
         else:  # operator package
             packages[-1]["type_length_id"] = msg[bit + 6]
             bit += 7
-            if packages[-1]["type_length_id"] == "0":
+            if packages[-1]["type_length_id"] == "0":  # fixed length subpackages
                 packages[-1]["subpackage_length"] = int(msg[bit : bit + 15], 2)
                 bit += 15
-                packages[-1]["subpackages"], bit = split_binary_msg_into_packages(msg, bit)
-            else:
+                packages[-1]["subpackages"], bit = parse_packages(msg, bit)
+            else:  # fixed number of subpackages
                 packages[-1]["n_subpackages"] = int(msg[bit : bit + 11], 2)
                 bit += 11
-                packages[-1]["subpackages"], bit = split_binary_msg_into_packages(
+                packages[-1]["subpackages"], bit = parse_packages(
                     msg, bit, packages[-1]["n_subpackages"]
                 )
         if n_subpackages:  # in case parent is operator package with fixed number of subpackages
@@ -55,6 +56,14 @@ def split_binary_msg_into_packages(msg: str, bit: int = 0, n_subpackages: Option
     return packages, bit
 
 
+def version_sum(packages: list[Package], counter=0) -> int:
+    for package in packages:
+        counter += package["version"]
+        if "subpackages" in package:
+            counter += version_sum(package["subpackages"])
+    return counter
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code - Day 16: Packet Decoder")
     parser.add_argument("-i", help="Input file path")
@@ -62,7 +71,6 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("example_input.txt")
     assert file_path.exists()
 
-    message = decode_hex_message_to_binary(file_path)
-    print(message)
-    packages, bit = split_binary_msg_into_packages(message, 0)
-    print("\n\n\n", packages, VERSION_SUM)
+    message = decode_binary_message_from_file(file_path)
+    packages, _ = parse_packages(message)
+    print(f"Answer part 1: Sum of all package/subpackage versions: {version_sum(packages)}")
