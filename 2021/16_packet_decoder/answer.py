@@ -1,4 +1,6 @@
 import argparse
+import functools
+import operator
 from pathlib import Path
 from typing import Optional, Union
 
@@ -43,12 +45,14 @@ def parse_packages(msg: str, bit: int = 0, n_subpackages: Optional[int] = None) 
                 packages[-1]["subpackage_length"] = int(msg[bit : bit + 15], 2)
                 bit += 15
                 packages[-1]["subpackages"], bit = parse_packages(msg, bit)
+                print("\n \n HERE111111: ", packages[-1]["subpackages"])
             else:  # fixed number of subpackages
                 packages[-1]["n_subpackages"] = int(msg[bit : bit + 11], 2)
                 bit += 11
                 packages[-1]["subpackages"], bit = parse_packages(
                     msg, bit, packages[-1]["n_subpackages"]
                 )
+                print("\n \n HERE222222: ", packages[-1]["subpackages"])
         if n_subpackages:  # in case parent is operator package with fixed number of subpackages
             n_subpackages += 1
             if len(packages) >= n_subpackages:
@@ -64,6 +68,33 @@ def version_sum(packages: list[Package], counter=0) -> int:
     return counter
 
 
+def calculate_expressions(packages: list[Package]) -> list[int]:
+    results = []
+    for package in packages:
+        if package["type_id"] == 4:  # literal value package
+            results.append(package["number"])
+        else:  # operator packages
+            subpackages_results = calculate_expressions(package["subpackages"])
+            if package["type_id"] == 0:  # sum operator
+                results.append(sum(subpackages_results))
+            elif package["type_id"] == 1:  # product operator
+                results.append(functools.reduce(operator.mul, subpackages_results))
+            elif package["type_id"] == 2:  # min operator
+                results.append(min(subpackages_results))
+            elif package["type_id"] == 3:  # max operator
+                results.append(max(subpackages_results))
+            elif package["type_id"] == 5:  # greater than
+                assert len(subpackages_results) == 2, f"{package} >"
+                results.append(1 if subpackages_results[0] > subpackages_results[1] else 0)
+            elif package["type_id"] == 6:  # less than
+                assert len(subpackages_results) == 2, f"{package} <"
+                results.append(1 if subpackages_results[0] < subpackages_results[1] else 0)
+            elif package["type_id"] == 7:  # equal to
+                assert len(subpackages_results) == 2, f"{package} =="
+                results.append(1 if subpackages_results[0] == subpackages_results[1] else 0)
+    return results
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code - Day 16: Packet Decoder")
     parser.add_argument("-i", help="Input file path")
@@ -74,3 +105,7 @@ if __name__ == "__main__":
     message = decode_binary_message_from_file(file_path)
     packages, _ = parse_packages(message)
     print(f"Answer part 1: Sum of all package/subpackage versions: {version_sum(packages)}")
+
+    print(packages)
+
+    print(calculate_expressions(packages))
