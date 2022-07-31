@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 from math import ceil
 from pathlib import Path
@@ -67,7 +68,6 @@ class SfNumber:
         for left_idx, (left_loc, _) in enumerate(x.data):
             assert len(left_loc) <= 5
             if len(left_loc) == 5:
-                zero_insert_loc = left_loc[:4]
                 if left_idx + 2 < len(x.data):
                     x.data[left_idx + 2] = (
                         x.data[left_idx + 2][0],
@@ -87,7 +87,6 @@ class SfNumber:
     @staticmethod
     def _split(x: "SfNumber") -> bool:
         for idx, (loc, value) in enumerate(x.data):
-            print(idx, loc, value)
             if value >= 10:
                 left_value = int(value / 2)
                 left_loc = loc + (0,)
@@ -115,6 +114,22 @@ class SfNumber:
         SfNumber.reduce(addends)
         return addends
 
+    def magnitude(self):
+        mag = copy.deepcopy(self.data)
+        for level in reversed(range(4)):
+            while True:
+                level_completed = True
+                for idx, (loc, _) in enumerate(mag):
+                    if len(loc) == level + 1:
+                        local_mag = 3 * mag[idx][1] + 2 * mag[idx + 1][1]
+                        del mag[idx : idx + 2]
+                        mag.insert(idx, (loc[:-1], local_mag))
+                        level_completed = False
+                        break
+                if level_completed:
+                    break
+        return mag[0][1]
+
 
 def parse_input_file(file_path: Path) -> list[SfNumberListRepr]:
     with open(file_path) as f:
@@ -129,11 +144,16 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("example_input.txt")
     assert file_path.exists()
 
-    sf_numbers = parse_input_file(file_path)
+    sf_numbers_list_repr = parse_input_file(file_path)
     # print(sf_numbers, type(sf_numbers[0]))
 
-    sf = SfNumber(sf_numbers[7])
+    sf_number = SfNumber(sf_numbers_list_repr[0])
+    for i in range(1, len(sf_numbers_list_repr)):
+        sf_number = sf_number + sf_numbers_list_repr[i]
 
+    print(f"Answer part 1: Magnitude of the final sum: {sf_number.magnitude()}")
+
+    """
     e = get_nested_list_item_by_index_list(sf_numbers[4], [0, 0, 0, 1])
     print("HERE", e)
 
@@ -153,3 +173,4 @@ if __name__ == "__main__":
     # print(z)
 
     # print(sf.as_list())
+    """
