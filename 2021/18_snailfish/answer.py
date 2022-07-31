@@ -1,9 +1,10 @@
 import argparse
 import copy
+import itertools
 import json
 from math import ceil
 from pathlib import Path
-from typing import Annotated, Union, Iterable, Any
+from typing import Union, Any
 
 
 SfNumberListRepr = list[Union[int, "SfNumberListRepr"]]  # always 2 elements per list
@@ -131,10 +132,10 @@ class SfNumber:
         return mag[0][1]
 
 
-def parse_input_file(file_path: Path) -> list[SfNumberListRepr]:
+def parse_input_file(file_path: Path) -> list[SfNumber]:
     with open(file_path) as f:
         lines = f.readlines()
-    return [json.loads(line) for line in lines]
+    return [SfNumber(json.loads(line)) for line in lines]
 
 
 if __name__ == "__main__":
@@ -144,33 +145,19 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("example_input.txt")
     assert file_path.exists()
 
-    sf_numbers_list_repr = parse_input_file(file_path)
+    sf_numbers = parse_input_file(file_path)
     # print(sf_numbers, type(sf_numbers[0]))
 
-    sf_number = SfNumber(sf_numbers_list_repr[0])
-    for i in range(1, len(sf_numbers_list_repr)):
-        sf_number = sf_number + sf_numbers_list_repr[i]
-
+    sf_number = sf_numbers[0]
+    for i in range(1, len(sf_numbers)):
+        sf_number += sf_numbers[i]
     print(f"Answer part 1: Magnitude of the final sum: {sf_number.magnitude()}")
 
-    """
-    e = get_nested_list_item_by_index_list(sf_numbers[4], [0, 0, 0, 1])
-    print("HERE", e)
-
-    print(sf.data)
-
-    sf.reduce(sf)
-    print(sf)
-    # print(sf.as_list())
-
-    # print(sf)
-
-    # z = sf + sf
-
-    # print("GOOO  ", z.data)
-
-    # print("ADDED", z.data, sf)
-    # print(z)
-
-    # print(sf.as_list())
-    """
+    max_mag = 0
+    all_comb = list(itertools.combinations(sf_numbers, 2))
+    for comb in all_comb:
+        addend = comb[0] + comb[1]
+        max_mag = max(max_mag, addend.magnitude())
+        addend = comb[1] + comb[0]
+        max_mag = max(max_mag, addend.magnitude())
+    print(f"Answer part 2: Max. magnitude of any two sf-numbers: {max_mag}")
