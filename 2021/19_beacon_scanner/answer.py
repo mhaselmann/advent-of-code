@@ -85,6 +85,13 @@ def common_points(
                 return common_pts0, common_pts1, subtract(p0, p1)
 
 
+def csum(d):
+    sum_ = 0
+    for key, value in d.items():
+        sum_ += sum(key) + sum(value[0])
+    return sum_
+
+
 def try_register_view(view_pts: list[Point], root_view_pv: PointVectors) -> Optional[list[Point]]:
     """
     Tries to register view by comparing all of its 24 orientations with registered view.
@@ -92,13 +99,16 @@ def try_register_view(view_pts: list[Point], root_view_pv: PointVectors) -> Opti
     and a list of the common points. If the points do not match in any orientation return None
     """
     for signs, axes in orientations():
-        view_pts = orient_pts(view_pts, signs, axes)
-        pv = get_all_point_to_point_vectors(view_pts)
+        view_pts_out = orient_pts(view_pts, signs, axes)
+        pv = get_all_point_to_point_vectors(view_pts_out)
         result = common_points(root_view_pv, pv)
+        # print("trying to match: ", csum(pv), csum(root_view_pv))
         if result is not None:
+
+            print("match", result[0], result[2], csum(pv), csum(root_view_pv))
             _, _, delta = result
-            registered_view = [add(pt, delta) for pt in view_pts]
-            return registered_view
+            view_pts_out = [add(pt, delta) for pt in view_pts_out]
+            return view_pts_out
 
 
 def register_all_views(views: Views, root_view: Views) -> Views:
@@ -107,25 +117,28 @@ def register_all_views(views: Views, root_view: Views) -> Views:
     reg_views = copy.deepcopy(root_view)
     unused_reg_view_keys = list(root_view.keys())
     reg_views_pv = {root_view_key: get_all_point_to_point_vectors(root_view[root_view_key])}
-    while len(views):
-        print(reg_views.keys())
+    while len(unused_reg_view_keys):
+        print("REGISTERED", reg_views.keys())
         new_unused_reg_view_keys = list()
         for view_key, view_pts in views.items():
             for reg_view_key in unused_reg_view_keys:
                 # print("\n\n", view_pts, reg_views_pv[reg_view_key])
-                view_pts = try_register_view(
+                print("HEY", view_key, reg_view_key, view_pts)
+                new_reg_view_pts = try_register_view(
                     view_pts=view_pts, root_view_pv=reg_views_pv[reg_view_key]
                 )
-                print("HEY", view_key)
-                if view_pts is not None:
-                    reg_views[view_key] = view_pts
-                    reg_views_pv[view_key] = get_all_point_to_point_vectors(view_pts)
+                print(new_reg_view_pts)
+                if new_reg_view_pts is not None:
+                    # print("match", len(view_pts), view_pts)
+                    reg_views[view_key] = new_reg_view_pts
+                    reg_views_pv[view_key] = get_all_point_to_point_vectors(new_reg_view_pts)
                     new_unused_reg_view_keys.append(view_key)
                     break
 
         # delete new_unused_reg_view_keys from views
         for view_key in new_unused_reg_view_keys:
             del views[view_key]
+        unused_reg_view_keys = new_unused_reg_view_keys.copy()
     return reg_views
 
 
@@ -152,7 +165,6 @@ if __name__ == "__main__":
     for signs, axes in orientations():
         pts1 = orient_pts(views[1], signs, axes)
         pv1 = get_all_point_to_point_vectors(pts1)
-        print("\n", pts1)
         result = common_points(pv0, pv1)
         if result is not None:
             break
@@ -165,6 +177,7 @@ if __name__ == "__main__":
     reg_view1_pts = try_register_view(views[1], pv0)
     pv1 = get_all_point_to_point_vectors(reg_view1_pts)
 
+    """
     print(reg_view1_pts)
 
     for signs, axes in orientations():
@@ -175,8 +188,21 @@ if __name__ == "__main__":
         if result is not None:
             break
 
-    print("YOOOO")
+    print("YOOOO", len(result[0]), len(result[1]))
     print(result[0])
     print(result[2])
+    print("\n\n\n")
+    """
 
-    # views = register_all_views(views, root_view)
+    reg_view4_pts = try_register_view(views[3], pv1)
+    print(reg_view4_pts)  # geht nicht für punkt 4
+
+    reg_views = register_all_views(views, root_view)
+    print(reg_views.keys())
+    print(reg_views)
+
+    all_points = list()
+    for view_name, pts in reg_views.items():
+        all_points = all_points + pts
+
+    print(len(set(all_points)))
