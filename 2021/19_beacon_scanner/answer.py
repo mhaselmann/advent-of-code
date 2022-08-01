@@ -1,11 +1,13 @@
 import argparse
 import copy
+import itertools
 from math import copysign
 from pathlib import Path
-from typing import Iterator
+from typing import Generator, Optional
 
 
-Point, Vector, Orientation = tuple[int, ...], tuple[int, ...], tuple[int, int, int]
+Point, Vector = tuple[int, ...], tuple[int, ...]
+Signs, Axes = tuple[int, int, int], tuple[int, int, int]
 PointVectors = dict[Point, list[Vector]]  # {starting point: vector to all other points}
 Views = dict[int, list[Point]]
 
@@ -44,28 +46,25 @@ def get_all_point_to_point_vectors(points=list[Point]) -> list[PointVectors]:
 
 
 # https://stackoverflow.com/questions/16452383/how-to-get-all-24-rotations-of-a-3-dimensional-array
-def orientations(v: Orientation = (1, 2, 3)) -> Iterator[Orientation]:
-    def roll(v):
-        return (v[0], v[2], -v[1])
-
-    def turn(v):
-        return (-v[1], v[0], v[2])
-
-    for cycle in range(2):
-        for step in range(3):  # Yield RTTT 3 times
+def orientations() -> Generator[tuple[Signs, Axes], None, None]:
+    v = (1, 2, 3)
+    roll = lambda v: (v[0], v[2], -v[1])
+    turn = lambda v: (-v[1], v[0], v[2])
+    signs = lambda v: [int(copysign(1, o)) for o in v]
+    axes = lambda v: [abs(o) - 1 for o in v]
+    for _ in range(2):
+        for _ in range(3):  # Yield RTTT 3 times
             v = roll(v)
-            yield (v)  #    Yield R
-            for i in range(3):  #    Yield TTT
+            yield (signs(v), axes(v))  #    Yield R
+            for _ in range(3):  #    Yield TTT
                 v = turn(v)
-                yield (v)
+                yield (signs(v), axes(v))
         v = roll(turn(roll(v)))  # Do RTR
 
 
-def orient_pts(pts: list[Point], orientation: Orientation) -> list[Point]:
+def orient_pts(pts: list[Point], signs: Signs, axes: Axes) -> list[Point]:
     pts_ort = list()
     for pt in pts:
-        signs = [int(copysign(1, o)) for o in orientation]
-        axes = [abs(o) - 1 for o in orientation]
         pts_ort.append(tuple([s * pt[a] for s, a in zip(signs, axes)]))
     return pts_ort
 
@@ -86,6 +85,50 @@ def common_points(
                 return common_pts0, common_pts1, subtract(p0, p1)
 
 
+def try_register_view(view_pts: list[Point], root_view_pv: PointVectors) -> Optional[list[Point]]:
+    """
+    Tries to register view by comparing all of its 24 orientations with registered view.
+    if at least 12 points (11 vectors) match return registered view of first argument
+    and a list of the common points. If the points do not match in any orientation return None
+    """
+    for signs, axes in orientations():
+        view_pts = orient_pts(view_pts, signs, axes)
+        pv = get_all_point_to_point_vectors(view_pts)
+        result = common_points(root_view_pv, pv)
+        if result is not None:
+            _, _, delta = result
+            registered_view = [add(pt, delta) for pt in view_pts]
+            return registered_view
+
+
+def register_all_views(views: Views, root_view: Views) -> Views:
+    assert len(root_view) == 1
+    root_view_key = list(root_view.keys())[0]
+    reg_views = copy.deepcopy(root_view)
+    unused_reg_view_keys = list(root_view.keys())
+    reg_views_pv = {root_view_key: get_all_point_to_point_vectors(root_view[root_view_key])}
+    while len(views):
+        print(reg_views.keys())
+        new_unused_reg_view_keys = list()
+        for view_key, view_pts in views.items():
+            for reg_view_key in unused_reg_view_keys:
+                # print("\n\n", view_pts, reg_views_pv[reg_view_key])
+                view_pts = try_register_view(
+                    view_pts=view_pts, root_view_pv=reg_views_pv[reg_view_key]
+                )
+                print("HEY", view_key)
+                if view_pts is not None:
+                    reg_views[view_key] = view_pts
+                    reg_views_pv[view_key] = get_all_point_to_point_vectors(view_pts)
+                    new_unused_reg_view_keys.append(view_key)
+                    break
+
+        # delete new_unused_reg_view_keys from views
+        for view_key in new_unused_reg_view_keys:
+            del views[view_key]
+    return reg_views
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code - Day 19: Beacon Scanner")
     parser.add_argument("-i", help="Input file path")
@@ -94,8 +137,10 @@ if __name__ == "__main__":
     assert file_path.exists()
 
     views = parse_input_file(file_path)
+    root_view = {0: views[0]}
+    del views[0]
 
-    pv0 = get_all_point_to_point_vectors(views[0])
+    pv0 = get_all_point_to_point_vectors(root_view[0])
     # print(pv0)
 
     # pv1 = get_all_point_to_point_vectors(views[1])
@@ -104,12 +149,34 @@ if __name__ == "__main__":
     # orientations = list(get_all_orientations())
     # print(orientations)
 
-    for orientation in orientations():
-        pts1 = orient_pts(views[1], orientation)
+    for signs, axes in orientations():
+        pts1 = orient_pts(views[1], signs, axes)
         pv1 = get_all_point_to_point_vectors(pts1)
         print("\n", pts1)
         result = common_points(pv0, pv1)
         if result is not None:
             break
 
-    print("YOOOO", result[2])
+    print("YOOOO")
+    print(result[0])
+    print(result[1])
+    print(result[2])
+
+    reg_view1_pts = try_register_view(views[1], pv0)
+    pv1 = get_all_point_to_point_vectors(reg_view1_pts)
+
+    print(reg_view1_pts)
+
+    for signs, axes in orientations():
+        pts4 = orient_pts(views[4], signs, axes)
+        pv4 = get_all_point_to_point_vectors(pts4)
+        # print("\n", pts4)
+        result = common_points(pv1, pv4)
+        if result is not None:
+            break
+
+    print("YOOOO")
+    print(result[0])
+    print(result[2])
+
+    # views = register_all_views(views, root_view)
