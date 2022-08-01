@@ -85,7 +85,9 @@ def common_points(
                 return common_pts0, common_pts1, subtract(p0, p1)
 
 
-def try_register_view(view_pts: list[Point], root_view_pv: PointVectors) -> Optional[list[Point]]:
+def try_register_view(
+    view_pts: list[Point], root_view_pv: PointVectors
+) -> Optional[tuple[list[Point], list[Point]]]:
     """
     Tries to register view by comparing all of its 24 orientations with registered view.
     if at least 12 points (11 vectors) match return registered view of first argument
@@ -96,27 +98,30 @@ def try_register_view(view_pts: list[Point], root_view_pv: PointVectors) -> Opti
         pv = get_all_point_to_point_vectors(view_pts_out)
         result = common_points(root_view_pv, pv)
         if result is not None:
-            _, _, delta = result
-            view_pts_out = [add(pt, delta) for pt in view_pts_out]
-            return view_pts_out
+            _, _, viewer_to_anchor = result
+            view_pts_out = [add(pt, viewer_to_anchor) for pt in view_pts_out]
+            return view_pts_out, viewer_to_anchor
 
 
 def register_all_views(views: Views, root_view: Views) -> Views:
     assert len(root_view) == 1
     root_view_key = list(root_view.keys())[0]
     reg_views = copy.deepcopy(root_view)
+    viewer_pos = {root_view_key: (0, 0, 0)}
     unused_reg_view_keys = list(root_view.keys())
     reg_views_pv = {root_view_key: get_all_point_to_point_vectors(root_view[root_view_key])}
     while len(unused_reg_view_keys):
         new_unused_reg_view_keys = list()
         for view_key, view_pts in views.items():
             for reg_view_key in unused_reg_view_keys:
-                new_reg_view_pts = try_register_view(
+                result = try_register_view(
                     view_pts=view_pts, root_view_pv=reg_views_pv[reg_view_key]
                 )
-                if new_reg_view_pts is not None:
-                    reg_views[view_key] = new_reg_view_pts
-                    reg_views_pv[view_key] = get_all_point_to_point_vectors(new_reg_view_pts)
+                if result is not None:
+                    view_pts, viewer_to_root = result
+                    reg_views[view_key] = view_pts
+                    reg_views_pv[view_key] = get_all_point_to_point_vectors(view_pts)
+                    viewer_pos[view_key] = viewer_to_root
                     new_unused_reg_view_keys.append(view_key)
                     break
 
@@ -124,7 +129,14 @@ def register_all_views(views: Views, root_view: Views) -> Views:
         for view_key in new_unused_reg_view_keys:
             del views[view_key]
         unused_reg_view_keys = new_unused_reg_view_keys.copy()
-    return reg_views
+    return reg_views, viewer_pos
+
+
+def manhatten_distance(pt0: Point, pt1: Point) -> int | float:
+    sum_ = 0
+    for p0, p1 in zip(pt0, pt1):
+        sum_ += abs(p0 - p1)
+    return sum_
 
 
 if __name__ == "__main__":
@@ -137,6 +149,12 @@ if __name__ == "__main__":
     views = parse_input_file(file_path)
     root_view = {0: views[0]}
     del views[0]
-    reg_views = register_all_views(views, root_view)
+    reg_views, viewer_pos = register_all_views(views, root_view)
     all_pts = set(itertools.chain(*list(reg_views.values())))
     print(f"Answer part 1: How many beacons are there: {len(all_pts)}")
+
+    max_manhatten_dist = 0
+    for pt0, pt1 in itertools.combinations(viewer_pos.values(), 2):
+        max_manhatten_dist = max(max_manhatten_dist, manhatten_distance(pt0, pt1))
+
+    print(f"Answer part 2: Distance between two fartest beacons: {max_manhatten_dist}")
