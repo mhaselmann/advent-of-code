@@ -34,7 +34,6 @@ def enhance_image(
     zero_to_one = list(img_enh_algorithm.values())[0]
     for i in range(iters):
         cv = i % 2 > 0 and zero_to_one
-        print("HERE", i, cv, iters)
         img = np.pad(img, [(3, 3), (3, 3)], mode="constant", constant_values=cv)
         img_enh = img.copy()
         for row in range(1, img.shape[0] - 1):
@@ -71,7 +70,8 @@ if __name__ == "__main__":
     assert file_path.exists()
 
     iea, img = parse_input_file(file_path)
-    print(img.astype(np.uint8))
     img = enhance_image(img, iea, 2)
-    print(img.astype(np.uint8))
     print(f"Answer part 1: How many pixels are lit up after 2 iterations: {img.sum()}")
+
+    img = enhance_image(img, iea, 48)
+    print(f"Answer part 1: How many pixels are lit up after 50 iterations: {img.sum()}")
