@@ -8,6 +8,7 @@ def parse_input_file(file_path: Path) -> tuple[int, int]:
     return tuple(int(line.strip().split()[-1]) for line in lines)
 
 
+### Part 1 ########################################################################################
 def roll_practice_dice_3x(start: int = 1, end: int = 100) -> tuple[int, int]:
     """
     Returns: total number of dice rollings, summed up score of n_rolls
@@ -30,23 +31,27 @@ def dirac_dice_practice_game(pos1: int, pos2: int) -> tuple[bool, int]:
     Return: bool' variable if player 1 wins, and control score according to puzzle description
     """
     total_score1, total_score2 = 0, 0
-    player1_turn = True
+    turn = 0
     for n_dice_rolled, dice_sum in roll_practice_dice_3x():
-        if player1_turn:
+        if turn % 2 == 0:  # player 1's turn
             pos1 += dice_sum
             score = pos1 % 10
             total_score1 += score if score > 0 else 10
             if total_score1 >= 1000:
                 return True, total_score2 * n_dice_rolled
-        else:
+        else:  # player 2's turn
             pos2 += dice_sum
             score = pos2 % 10
             total_score2 += score if score > 0 else 10
             if total_score2 >= 1000:
                 return False, total_score1 * n_dice_rolled
-        player1_turn = not player1_turn
+        turn += 1
 
 
+###################################################################################################
+
+
+### Part 2 ########################################################################################
 universes_per_dice_sum_per_turn = {3: 1, 4: 3, 5: 6, 6: 7, 7: 6, 8: 3, 9: 1}  # {dice_sum: n_univ}
 n_universes_player1_wins, n_universes_player2_wins = 0, 0
 
@@ -63,7 +68,7 @@ def one_turn_with_dirac_dice(
     global n_universes_player1_wins
     global n_universes_player2_wins
     for dice_sum, n_universes in universes_per_dice_sum_per_turn.items():
-        if turn % 2 == 0:
+        if turn % 2 == 0:  # player 1's turn
             new_pos1 = pos1 + dice_sum
             score = new_pos1 % 10
             score = score if score > 0 else 10
@@ -80,7 +85,7 @@ def one_turn_with_dirac_dice(
                     turn=turn + 1,
                     total_n_universes=new_total_n_universes,
                 )
-        else:
+        else:  # player 2's turn
             new_pos2 = pos2 + dice_sum
             score = new_pos2 % 10
             score = score if score > 0 else 10
@@ -97,6 +102,9 @@ def one_turn_with_dirac_dice(
                     turn=turn + 1,
                     total_n_universes=new_total_n_universes,
                 )
+
+
+###################################################################################################
 
 
 if __name__ == "__main__":
