@@ -47,7 +47,7 @@ def dirac_dice_practice_game(pos1: int, pos2: int) -> tuple[bool, int]:
         player1_turn = not player1_turn
 
 
-universes_per_score_per_turn = {3: 1, 4: 3, 5: 6, 6: 7, 7: 6, 8: 3, 9: 1}  # {score: universes}
+universes_per_dice_sum_per_turn = {3: 1, 4: 3, 5: 6, 6: 7, 7: 6, 8: 3, 9: 1}  # {dice_sum: n_univ}
 n_universes_player1_wins, n_universes_player2_wins = 0, 0
 
 
@@ -62,17 +62,15 @@ def one_turn_with_dirac_dice(
 ):
     global n_universes_player1_wins
     global n_universes_player2_wins
-    for score, n_universes in universes_per_score_per_turn.items():
+    for dice_sum, n_universes in universes_per_dice_sum_per_turn.items():
         if turn % 2 == 0:
-            new_pos1 = pos1 + score
-            score = pos1 % 10
+            new_pos1 = pos1 + dice_sum
+            score = new_pos1 % 10
             score = score if score > 0 else 10
             new_total_score1 = total_score1 + score
             new_total_n_universes = n_universes * total_n_universes
             if new_total_score1 >= target:
-                # print(turn)
                 n_universes_player1_wins += new_total_n_universes
-                return
             else:
                 one_turn_with_dirac_dice(
                     pos1=new_pos1,
@@ -83,14 +81,13 @@ def one_turn_with_dirac_dice(
                     total_n_universes=new_total_n_universes,
                 )
         else:
-            new_pos2 = pos2 + score
-            score = pos2 % 10
+            new_pos2 = pos2 + dice_sum
+            score = new_pos2 % 10
             score = score if score > 0 else 10
             new_total_score2 = total_score2 + score
             new_total_n_universes = n_universes * total_n_universes
             if new_total_score2 >= target:
                 n_universes_player2_wins += new_total_n_universes
-                return
             else:
                 one_turn_with_dirac_dice(
                     pos1=pos1,
@@ -114,4 +111,4 @@ if __name__ == "__main__":
     print(f"Answer part1: {control_score}")
 
     one_turn_with_dirac_dice(*start_pos)
-    print(n_universes_player1_wins, n_universes_player2_wins)
+    print(f"Answer part2: {max(n_universes_player1_wins, n_universes_player2_wins)}")

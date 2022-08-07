@@ -1,7 +1,3 @@
-Advent of Code[About][Events][Shop][Settings][Log Out]mhaselmann 41*
-  0.0.0.0:2021[Calendar][AoC++][Sponsors][Leaderboard][Stats]
-Our sponsors help make Advent of Code possible:
-JetBrains - Get ready to jingle with Advent of Code in Kotlin! Have fun, learn new things, and win prizes. Believe in magic with Kotlin. Happy holidays! https://jb.gg/AoC
 --- Day 21: Dirac Dice ---
 There's not much to do as you slowly descend to the bottom of the ocean. The submarine computer challenges you to a nice game of Dirac Dice.
 
@@ -39,8 +35,6 @@ Play a practice game using the deterministic 100-sided die. The moment either pl
 
 Your puzzle answer was 713328.
 
-The first half of this puzzle is complete! It provides one gold star: *
-
 --- Part Two ---
 Now that you're warmed up, it's time to play the real game.
 
@@ -54,9 +48,12 @@ Using the same starting positions as in the example above, player 1 wins in 4443
 
 Using your given starting positions, determine every possible outcome. Find the player that wins in more universes; in how many universes does that player win?
 
-Answer: 
- 
+Your puzzle answer was 92399285032143.
 
-Although it hasn't changed, you can still get your puzzle input.
+Both parts of this puzzle are complete! They provide two gold stars: **
+
+At this point, you should return to your Advent calendar and try another puzzle.
+
+If you still want to see it, you can get your puzzle input.
 
 You can also [Share] this puzzle.
