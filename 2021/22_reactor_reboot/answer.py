@@ -70,30 +70,8 @@ def _split(x_: Rectangle, z_: Rectangle) -> list[Rectangle]:
         # append intersecting part
         if len(x_split):
             x_split.append([*x_[:dim], (max(x[0], z[0]), min(x[1], z[1])), *x_[dim + 1 :]])
-            print("\n Splitted: ", "x:", x_, "z:", z_, "split:", x_split, "\n")
+            # print("\n Splitted: ", "x:", x_, "z:", z_, "split:", x_split, "\n")
             return x_split
-
-
-def _subtract_old(z_: Rectangle, x_: Rectangle) -> list[Rectangle]:
-    """
-    Subtract intersecting or enclosed rectangle x from rectangle z set by splitting
-    z in multiple rectangles that do not overlap with x; delete self.rectangles
-    that are enclosed in rectangle
-    """
-    relation = _relation(z_, x_)
-    if relation == "no_intersect":
-        return z_
-    elif relation in ["enclosed", "ident"]:
-        return
-    else:
-        print("_____________splitting: ", z_, x_)
-        splits = _split(z_, x_)
-        res = []
-        for s in splits:
-            r = _subtract(s, x_)
-            if r is not None:
-                res.append(r)
-        return res
 
 
 def _subtract(z_: Rectangle, x_: Rectangle, res: list[Rectangle]):
@@ -106,7 +84,7 @@ def _subtract(z_: Rectangle, x_: Rectangle, res: list[Rectangle]):
     if relation == "no_intersect":
         res.append(z_)
     elif relation in ["enclosing", "intersect"]:
-        print(relation, "_____________splitting: ", z_, x_)
+        # print(relation, "_____________splitting: ", z_, x_)
         splits = _split(z_, x_)
         for s in splits:
             _subtract(s, x_, res)
@@ -140,7 +118,6 @@ class IntersectingRectangles:
                 return
         # print("Appending: ", x)
         self.rectangles.append(x)
-        print(self.rectangles)
 
     def subtract(self, x: Rectangle):
         """
@@ -170,31 +147,16 @@ if __name__ == "__main__":
     assert file_path.exists()
 
     rectangles = parse_input_file(file_path)
-    print(rectangles)
-
-    print(_relation(rectangles[3][0], rectangles[0][0]))
-
     intersecting_rectangles = IntersectingRectangles()
-    intersecting_rectangles.add(rectangles[3][0])
-    intersecting_rectangles.add(rectangles[0][0])
-    intersecting_rectangles.add(rectangles[1][0])
-    intersecting_rectangles.add(rectangles[2][0])
-    print(intersecting_rectangles.rectangles)
-
-    print(_split(rectangles[0][0], rectangles[3][0]))
-    print("\n \n")
-    res = []
-    print("HERE", _subtract(rectangles[0][0], rectangles[3][0], res))
-    print(res)
-
-    intersecting_rectangles = IntersectingRectangles()
-    intersecting_rectangles.add(rectangles[0][0])
-    print("first", intersecting_rectangles.sum())
-    intersecting_rectangles.add(rectangles[1][0])
-    print("second", intersecting_rectangles.sum())
-    intersecting_rectangles.subtract(rectangles[2][0])
-    print("third", intersecting_rectangles.sum())
-    intersecting_rectangles.add(rectangles[3][0])
-    print("forth", intersecting_rectangles.sum())
-    print("\n \n", intersecting_rectangles.rectangles)
+    for r_, add in rectangles:
+        consider = True
+        for r in r_:
+            if abs(r[0] > 50) or abs(r[1] > 50):
+                consider = False
+        if consider:
+            if add:
+                intersecting_rectangles.add(r_)
+            else:
+                intersecting_rectangles.subtract(r_)
+        print(r_, intersecting_rectangles.sum())
     print(intersecting_rectangles.sum())
