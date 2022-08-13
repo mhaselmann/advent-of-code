@@ -4,6 +4,8 @@ from math import prod
 import re
 from pathlib import Path
 
+import numpy as np
+
 # Rectangles of any dimension: 3-dim -> Cube
 # bool indicating wheter add (on) or subtract (off)
 Rectangle = list[tuple[int, int]]
@@ -28,27 +30,51 @@ def parse_input_file(file_path: Path) -> list[tuple[bool, Rectangle]]:
     return rectangles
 
 
+class IntersectingRectanglesNaive:
+    """
+    Quick solution for part 1 and for the valitation of the approach for large numbers
+    only compatible with 3-dim shapes
+    """
+
+    def __init__(self):
+        self.core = np.zeros(shape=[101, 101, 101], dtype=bool)
+
+    def add(self, x: Rectangle):
+        self.core[
+            x[0][0] + 50 : x[0][1] + 51, x[1][0] + 50 : x[1][1] + 51, x[2][0] + 50 : x[2][1] + 51
+        ] = True
+
+    def subtract(self, x: Rectangle):
+        self.core[
+            x[0][0] + 50 : x[0][1] + 51, x[1][0] + 50 : x[1][1] + 51, x[2][0] + 50 : x[2][1] + 51
+        ] = False
+
+    def sum(self):
+        return self.core.sum()
+
+
 def _relation(x_: Rectangle, y_: Rectangle) -> str:
-    x_enclosing_y = True
-    x_enclosed_in_y = True
-    intersecting = True
-    for x, y in zip(x_, y_):
+    x_enclosing_y = [False] * len(x_)
+    x_enclosed_in_y = [False] * len(x_)
+    intersecting = [False] * len(x_)
+    for dim, (x, y) in enumerate(zip(x_, y_)):
         # enclosing
-        if not (x[0] <= y[0] and x[1] >= y[1]):
-            x_enclosing_y = False
+        if x[0] <= y[0] and x[1] >= y[1]:
+            x_enclosing_y[dim] = True
         # enclosed
-        if not (x[0] >= y[0] and x[1] <= y[1]):
-            x_enclosed_in_y = False
+        if x[0] >= y[0] and x[1] <= y[1]:
+            x_enclosed_in_y[dim] = True
         # intersecting
-        if not (x[0] >= y[0] and x[0] <= y[1] or x[1] >= y[0] and x[1] <= y[1]):
-            intersecting = False
-    if x_enclosing_y and x_enclosed_in_y:
+        if (x[0] >= y[0] and x[0] <= y[1]) or (x[1] >= y[0] and x[1] <= y[1]):
+            intersecting[dim] = True
+    intersecting = [i or e for i, e in zip(intersecting, x_enclosing_y)]
+    if all(x_enclosing_y) and all(x_enclosed_in_y):
         return "ident"
-    elif x_enclosing_y:
+    elif all(x_enclosing_y):
         return "enclosing"
-    elif x_enclosed_in_y:
+    elif all(x_enclosed_in_y):
         return "enclosed"
-    elif intersecting:
+    elif all(intersecting):
         return "intersect"
     else:
         return "no_intersect"
@@ -70,7 +96,6 @@ def _split(x_: Rectangle, z_: Rectangle) -> list[Rectangle]:
         # append intersecting part
         if len(x_split):
             x_split.append([*x_[:dim], (max(x[0], z[0]), min(x[1], z[1])), *x_[dim + 1 :]])
-            # print("\n Splitted: ", "x:", x_, "z:", z_, "split:", x_split, "\n")
             return x_split
 
 
@@ -84,7 +109,6 @@ def _subtract(z_: Rectangle, x_: Rectangle, res: list[Rectangle]):
     if relation == "no_intersect":
         res.append(z_)
     elif relation in ["enclosing", "intersect"]:
-        # print(relation, "_____________splitting: ", z_, x_)
         splits = _split(z_, x_)
         for s in splits:
             _subtract(s, x_, res)
@@ -106,7 +130,6 @@ class IntersectingRectangles:
         """
         for idx, rect in reversed(list(enumerate(self.rectangles))):
             relation = _relation(x, rect)
-            # print("\n Relation:", relation, "x:", x, "y:", rect, "\n")
             if relation in ["ident", "enclosed"]:  # no further actions required
                 return
             elif relation == "enclosing":  # remove existing rectangle
@@ -116,7 +139,6 @@ class IntersectingRectangles:
                 for splitted_rectangle in splitted_rectangles:
                     self.add(splitted_rectangle)
                 return
-        # print("Appending: ", x)
         self.rectangles.append(x)
 
     def subtract(self, x: Rectangle):
@@ -147,7 +169,7 @@ if __name__ == "__main__":
     assert file_path.exists()
 
     rectangles = parse_input_file(file_path)
-    intersecting_rectangles = IntersectingRectangles()
+    intersecting_rectangles_naive = IntersectingRectanglesNaive()
     for r_, add in rectangles:
         consider = True
         for r in r_:
@@ -155,8 +177,12 @@ if __name__ == "__main__":
                 consider = False
         if consider:
             if add:
-                intersecting_rectangles.add(r_)
+                intersecting_rectangles_naive.add(r_)
             else:
-                intersecting_rectangles.subtract(r_)
-        print(r_, intersecting_rectangles.sum())
-    print(intersecting_rectangles.sum())
+                intersecting_rectangles_naive.subtract(r_)
+    print(f"Answer part 1: {intersecting_rectangles_naive.sum()}")
+
+    intersecting_rectangles = IntersectingRectangles()
+    for r_, add in rectangles:
+        intersecting_rectangles.add(r_) if add else intersecting_rectangles.subtract(r_)
+    print(f"Answer part 2: {intersecting_rectangles.sum()}")
