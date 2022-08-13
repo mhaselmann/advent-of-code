@@ -6,9 +6,8 @@ from pathlib import Path
 
 import numpy as np
 
-# Rectangles of any dimension: 3-dim -> Cube
-# bool indicating wheter add (on) or subtract (off)
-Rectangle = list[tuple[int, int]]
+
+Rectangle = list[tuple[int, int]]  # Rectangles of any dimension: 3-dim -> Cube
 
 
 def parse_input_file(file_path: Path) -> list[tuple[bool, Rectangle]]:
