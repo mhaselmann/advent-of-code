@@ -26,8 +26,6 @@ class State:
         self.c.append(cave2)
         self.c.append(cave3)
         self.h = hallway
-        self.target_order = ["A", "B", "C", "D"]
-        self.type_to_cave = {cave: idx for idx, cave in enumerate(self.target_order)}
 
     def __repr__(self):
         text = f"""
@@ -41,28 +39,13 @@ class State:
     def __eq__(self, other: "State"):
         if self.h != other.h:
             return False
-        for self_cave, other_cave, type_ in zip(self.c, other.c, self.target_order):
+        for self_cave, other_cave in zip(self.c, other.c):
             if self_cave != other_cave:
                 return False
         return True
 
     def __hash__(self):
         return hash((tuple(c) for c in self.c) + tuple(self.h))
-
-    def is_finished(self) -> bool:
-        for cave, type_ in zip(self.c, self.target_order):
-            if cave != [type_, type_]:
-                return False
-        return True
-
-    def are_caves_entry_ready(self) -> list[bool]:
-        caves_entry_ready = []
-        for c, targ_type in zip(self.c, self.target_order):
-            if c[0] == "." and c[1] in [".", targ_type] or c[0] == targ_type and c[1] == targ_type:
-                caves_entry_ready.append(True)
-            else:
-                caves_entry_ready.append(False)
-        return caves_entry_ready
 
     def distance_to_cave(self, cave_idx: int, h_idx_start: int) -> int | None:
         """
@@ -90,10 +73,28 @@ class Node:
         self.state = state
         self.parent_state = parent_state
         self.cost = cost
+
+        self.target_order = ["A", "B", "C", "D"]
         self.step_cost_per_type = {"A": 1, "B": 10, "C": 100, "D": 1000}
+        self.type_to_cave = {cave: idx for idx, cave in enumerate(self.target_order)}
 
     def __repr__(self):
         return f"{self.state}  {self.cost} \n"
+
+    def is_finished(self) -> bool:
+        for cave, type_ in zip(self.state.c, self.target_order):
+            if cave != [type_, type_]:
+                return False
+        return True
+
+    def _are_caves_entry_ready(self) -> list[bool]:
+        caves_entry_ready = []
+        for c, targ_type in zip(self.state.c, self.target_order):
+            if c[0] == "." and c[1] in [".", targ_type] or c[0] == targ_type and c[1] == targ_type:
+                caves_entry_ready.append(True)
+            else:
+                caves_entry_ready.append(False)
+        return caves_entry_ready
 
     def _explore_hallway(
         self,
@@ -135,11 +136,11 @@ class Node:
 
     def get_next_possible_nodes(self) -> list["Node"]:
         next_nodes = list()
-        caves_entry_ready = self.state.are_caves_entry_ready()
+        caves_entry_ready = self._are_caves_entry_ready()
 
         # start from caves
         for cave_idx, c in enumerate(self.state.c):
-            sc = self.step_cost_per_type[self.state.target_order[cave_idx]]
+            sc = self.step_cost_per_type[self.target_order[cave_idx]]
             if caves_entry_ready[cave_idx]:
                 continue
             elif c[0] != ".":
@@ -157,7 +158,6 @@ class Node:
                 continue
             target_cave_idx = self.state.type_to_cave[type_]
             dist_to_cave = self.state.distance_to_cave(cave_idx=target_cave_idx, h_idx_start=h_idx)
-            print(dist_to_cave)
             if caves_entry_ready[target_cave_idx] and dist_to_cave:
                 new_node = copy.deepcopy(self)
                 new_node.state.h[h_idx] = "."
