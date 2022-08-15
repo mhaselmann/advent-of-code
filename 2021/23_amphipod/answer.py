@@ -143,9 +143,56 @@ class Node:
         return new_nodes
 
     def get_next_possible_nodes(self) -> list["Node"]:
-        next_nodes = list()
         caves_entry_ready = self._are_caves_entry_ready()
 
+        # start from caves directly looking for target caves
+        for cave_idx, c in enumerate(self.state.c):
+            if caves_entry_ready[cave_idx]:
+                continue
+            for place, type_ in enumerate(c):
+                if type_ != "." and caves_entry_ready[self.type_to_cave[type_]]:
+                    target_cave_idx = self.type_to_cave[type_]
+                    hallway_dist = self.state.distance_to_cave(target_cave_idx, cave_idx * 2 + 2)
+                    if hallway_dist is None:
+                        break
+                    if self.state.c[target_cave_idx][1] == ".":
+                        target_cave_pos = 1
+                    else:
+                        target_cave_pos = 0
+                    next_node = copy.deepcopy(self)
+                    next_node.step += 1
+                    next_node.parent_state = copy.deepcopy(self.state)
+                    next_node.cost += (
+                        place + 1 + hallway_dist + target_cave_pos + 1
+                    ) * self.step_cost_per_type[type_]
+                    next_node.state.c[cave_idx][place] = "."
+                    next_node.state.c[target_cave_idx][target_cave_pos] = type_
+                    return [next_node]
+
+        # start from hallway
+        for h_idx, type_ in enumerate(self.state.h):
+            if type_ in [".", None]:
+                continue
+            cave_idx = self.type_to_cave[type_]
+            sc = self.step_cost_per_type[self.target_order[cave_idx]]
+            dist_to_cave = self.state.distance_to_cave(cave_idx, h_idx)
+            if caves_entry_ready[cave_idx] and dist_to_cave:
+                new_state = copy.deepcopy(self)
+                new_state.state.h[h_idx] = "."
+                new_state.step += 1
+                new_state.cost += dist_to_cave * sc
+                new_state.parent_state = copy.deepcopy(self.state)
+                if self.state.c[cave_idx][1] == ".":
+                    new_state.state.c[cave_idx][1] = type_
+                    new_state.cost += 2 * sc
+                elif self.state.c[cave_idx][0] == ".":
+                    new_state.state.c[cave_idx][0] = type_
+                    new_state.cost += sc
+                else:
+                    raise ValueError(f"Illegal node {new_state} {type_}")
+                return [new_state]
+
+        next_nodes = list()
         # start from caves
         for cave_idx, c in enumerate(self.state.c):
             if caves_entry_ready[cave_idx]:
@@ -159,38 +206,21 @@ class Node:
                 n.state.c[cave_idx][1] = "."
                 [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, 1, c[1])]
 
-        # start from hallway
-        for h_idx, type_ in enumerate(self.state.h):
-            if type_ in [".", None]:
-                continue
-            cave_idx = self.type_to_cave[type_]
-            sc = self.step_cost_per_type[self.target_order[cave_idx]]
-            dist_to_cave = self.state.distance_to_cave(cave_idx, h_idx)
-            if caves_entry_ready[cave_idx] and dist_to_cave:
-                new = copy.deepcopy(self)
-                new.state.h[h_idx] = "."
-                new.step += 1
-                new.cost += dist_to_cave * sc
-                new.parent_state = copy.deepcopy(self.state)
-                if self.state.c[cave_idx][1] == ".":
-                    new.state.c[cave_idx][1] = type_
-                    new.cost += 2 * sc
-                elif self.state.c[cave_idx][0] == ".":
-                    new.state.c[cave_idx][0] = type_
-                    new.cost += sc
-                else:
-                    raise ValueError(f"Illegal node {new} {type_}")
-                next_nodes.append(new)
+        next_nodes = sorted(next_nodes, key=lambda x: x.cost)
 
         return next_nodes
 
 
 class Graph:
-    def __init__(self, start_state: State):
+    def __init__(self, start_state: State, end_state: State | None = None):
         self.nodes: dict[State, Node] = {}
         self.best_cost = 10**6
         self.start_state = start_state
-        self.end_state: State | None = None
+        self.end_state = end_state
+        if self.end_state is None:
+            self.end_state = State(
+                cave0=["A", "A"], cave1=["B", "B"], cave2=["C", "C"], cave3=["D", "D"]
+            )
         self.find_shortest_path()
 
     def find_shortest_path(self, start: Node | None = None):
@@ -199,12 +229,15 @@ class Graph:
         if start in self.nodes and start.cost >= self.nodes[start].cost:
             return
         self.nodes[start.state] = start
-        if start.is_finished():
+        if start.state == self.end_state:
             self.best_cost = start.cost
             self.end_state = start.state
-            print(self.best_cost, start.step)
+            print("\n\nHERE", self.best_cost, start.step)
+            self.print_shortest_path()
         else:
+            # print(start)
             for next_node in start.get_next_possible_nodes():
+                # print(next_node)
                 if next_node.cost < self.best_cost:
                     self.find_shortest_path(next_node)
 
@@ -248,8 +281,14 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("example_input.txt")
     assert file_path.exists()
 
+    target_path = Path("target_input.txt")
+
     start_state = parse_input_file(file_path)
-    graph = Graph(start_state)
+    end_state = parse_input_file(target_path)
+    print(start_state)
+    print(end_state)
+    graph = Graph(start_state, end_state=None)
     # print(graph.nodes)
     graph.print_shortest_path()
     print(graph.best_cost)
+    print(graph.start_state, graph.end_state)
