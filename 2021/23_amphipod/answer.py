@@ -68,10 +68,12 @@ class Node:
         self,
         state: State,
         parent_state: State | None = None,
+        step: int = 0,
         cost: int = 0,
     ):
         self.state = state
         self.parent_state = parent_state
+        self.step = step
         self.cost = cost
 
         self.target_order = ["A", "B", "C", "D"]
@@ -119,6 +121,7 @@ class Node:
             else:
                 new_node = copy.deepcopy(incomplete_starting_node)
                 new_node.state.h[h_idx] = item_type
+                new_node.step += 1
                 new_node.cost += cost_offset + (distance + 1) * self.step_cost_per_type[item_type]
                 new_nodes.append(new_node)
         # go rightwards
@@ -130,6 +133,7 @@ class Node:
             else:
                 new_node = copy.deepcopy(incomplete_starting_node)
                 new_node.state.h[h_idx] = item_type
+                new_node.step += 1
                 new_node.cost += cost_offset + (distance + 1) * self.step_cost_per_type[item_type]
                 new_nodes.append(new_node)
         return new_nodes
@@ -156,15 +160,20 @@ class Node:
         for h_idx, type_ in enumerate(self.state.h):
             if type_ in [".", None]:
                 continue
-            target_cave_idx = self.state.type_to_cave[type_]
+            target_cave_idx = self.type_to_cave[type_]
+            sc = self.step_cost_per_type[self.target_order[target_cave_idx]]
             dist_to_cave = self.state.distance_to_cave(cave_idx=target_cave_idx, h_idx_start=h_idx)
             if caves_entry_ready[target_cave_idx] and dist_to_cave:
                 new_node = copy.deepcopy(self)
                 new_node.state.h[h_idx] = "."
-                if self.c[target_cave_idx][1] == ".":
+                new_node.step += 1
+                new_node.cost += dist_to_cave * sc
+                if self.state.c[target_cave_idx][1] == ".":
                     new_node.state.c[target_cave_idx][1] = type_
-                elif self.c[target_cave_idx][0] == ".":
+                    new_node.cost += 2 * sc
+                elif self.state.c[target_cave_idx][0] == ".":
                     new_node.state.c[target_cave_idx][0] = type_
+                    new_node.cost += sc
                 else:
                     raise ValueError(f"Illegal node {new_node} {type_}")
                 next_nodes.append(new_node)
@@ -174,7 +183,10 @@ class Node:
 
 class Graph:
     def __init__(self, starting_node: State):
-        self.nodes = {starting_node: 0}
+        self.nodes = {starting_node.state: starting_node}
+
+    def get_shortest_path(self):
+        pass
 
 
 def parse_input_file(file_path: Path) -> State:
