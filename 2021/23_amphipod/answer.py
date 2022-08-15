@@ -202,7 +202,7 @@ class Graph:
         if start.is_finished():
             self.best_cost = start.cost
             self.end_state = start.state
-            # print(self.best_cost, start.step)
+            print(self.best_cost, start.step)
         else:
             for next_node in start.get_next_possible_nodes():
                 if next_node.cost < self.best_cost:
