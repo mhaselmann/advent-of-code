@@ -29,7 +29,7 @@ class State:
         self.h = hallway
         self.cost = cost
         self.target_order = ["A", "B", "C", "D"]
-        self.target_item_type_to_cave = {cave: idx for idx, cave in enumerate(self.target_order)}
+        self.type_to_cave = {cave: idx for idx, cave in enumerate(self.target_order)}
 
     def __repr__(self):
         text = f"""
@@ -100,43 +100,85 @@ class State:
         caves_entry_ready = []
         for c, targ_type in zip(self.c, self.target_order):
             if c[0] == "." and c[1] in [".", targ_type] or c[0] == targ_type and c[1] == targ_type:
-                pass
+                caves_entry_ready.append(True)
+            else:
+                caves_entry_ready.append(False)
+        return caves_entry_ready
+
+    def distance_to_cave(self, cave_idx: int, h_idx_start: int) -> int | None:
+        """
+        Returns distance to cave. If cave is not reachable (due to obstacles) return None
+        """
+        h_idx_end = cave_idx * 2 + 2
+        if h_idx_start < h_idx_end:
+            for distance, h_idx in enumerate(range(h_idx_start + 1, h_idx_end + 1)):
+                if self.h[h_idx] not in [".", None]:
+                    return None
+        elif h_idx_start > h_idx_end:
+            for distance, h_idx in enumerate(range(h_idx_start - 1, h_idx_end - 1, -1)):
+                if self.h[h_idx] not in [".", None]:
+                    return None
+        return distance + 1
 
     def get_next_possible_states(self) -> list["State"]:
         next_states = list()
+        caves_entry_ready = self.are_caves_entry_ready()
+
         # start from caves
-        for cave_idx, (c, targ_type) in enumerate(zip(self.c, self.target_order)):
-            if c[0] == "." and c[1] in [".", targ_type] or c[0] == targ_type and c[1] == targ_type:
+        for cave_idx, c in enumerate(self.c):
+            if caves_entry_ready[cave_idx]:
                 continue
             elif c[0] != ".":
-                incomplete_starting_state = copy.deepcopy(self)
-                incomplete_starting_state.c[cave_idx][0] = "."
-                next_states.append(
-                    self._explore_hallway(incomplete_starting_state, cave_idx, c[0], 1)
-                )
+                s = copy.deepcopy(self)
+                s.c[cave_idx][0] = "."
+                [next_states.append(s) for s in self._explore_hallway(s, cave_idx, c[0], 1)]
             elif c[1] != ".":
-                incomplete_starting_state = copy.deepcopy(self)
-                incomplete_starting_state.c[cave_idx][1] = "."
-                next_states.append(
-                    self._explore_hallway(incomplete_starting_state, cave_idx, c[1], 2)
-                )
+                s = copy.deepcopy(self)
+                s.c[cave_idx][1] = "."
+                [next_states.append(s) for s in self._explore_hallway(s, cave_idx, c[0], 2)]
+
         # start from hallway
         for h_idx, type_ in enumerate(self.h):
             if type_ in [".", None]:
                 continue
-            target_cave_idx = self.target_item_type_to_cave[type_]
+            target_cave_idx = self.type_to_cave[type_]
+            dist_to_cave = self.distance_to_cave(cave_idx=target_cave_idx, h_idx_start=h_idx)
+            print(dist_to_cave)
+            if caves_entry_ready[target_cave_idx] and dist_to_cave:
+                new_state = copy.deepcopy(self)
+                new_state.h[h_idx] = "."
+                if self.c[target_cave_idx][1] == ".":
+                    new_state.c[target_cave_idx][1] = type_
+                elif self.c[target_cave_idx][0] == ".":
+                    new_state.c[target_cave_idx][0] = type_
+                else:
+                    raise ValueError(f"Illegal state {new_state} {type_}")
+                next_states.append(new_state)
 
         return next_states
 
 
 def parse_input_file(file_path: Path) -> State:
     with open(file_path) as f:
-        lines = f.readlines()
+        l = f.readlines()
     return State(
-        cave0=[lines[2][3], lines[3][3]],
-        cave1=[lines[2][5], lines[3][5]],
-        cave2=[lines[2][7], lines[3][7]],
-        cave3=[lines[2][9], lines[3][9]],
+        cave0=[l[2][3], l[3][3]],
+        cave1=[l[2][5], l[3][5]],
+        cave2=[l[2][7], l[3][7]],
+        cave3=[l[2][9], l[3][9]],
+        hallway=[
+            l[1][1],
+            l[1][2],
+            None,
+            l[1][4],
+            None,
+            l[1][6],
+            None,
+            l[1][8],
+            None,
+            l[1][10],
+            l[1][11],
+        ],
     )
 
 
