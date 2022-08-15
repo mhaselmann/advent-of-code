@@ -102,8 +102,8 @@ class Node:
         self,
         incomplete_starting_node: "Node",
         cave_idx: int,
+        cave_start_pos: int,
         item_type: str,
-        cost_offset: int,
     ) -> list["Node"]:
         """
         Returns all possibles States from start_idx [2, 4, 6, 8]
@@ -120,11 +120,12 @@ class Node:
             elif self.state.h[h_idx] != ".":
                 break
             else:
-                new_node = copy.deepcopy(incomplete_starting_node)
-                new_node.state.h[h_idx] = item_type
-                new_node.step += 1
-                new_node.cost += cost_offset + (distance + 1) * self.step_cost_per_type[item_type]
-                new_nodes.append(new_node)
+                new = copy.deepcopy(incomplete_starting_node)
+                new.state.h[h_idx] = item_type
+                new.step += 1
+                new.cost += (cave_start_pos + distance + 2) * self.step_cost_per_type[item_type]
+                new.parent_state = copy.deepcopy(self.state)
+                new_nodes.append(new)
 
         # go rightwards
         for distance, h_idx in enumerate(range(h_idx_start + 1, 11)):
@@ -133,11 +134,12 @@ class Node:
             elif self.state.h[h_idx] != ".":
                 break
             else:
-                new_node = copy.deepcopy(incomplete_starting_node)
-                new_node.state.h[h_idx] = item_type
-                new_node.step += 1
-                new_node.cost += cost_offset + (distance + 1) * self.step_cost_per_type[item_type]
-                new_nodes.append(new_node)
+                new = copy.deepcopy(incomplete_starting_node)
+                new.state.h[h_idx] = item_type
+                new.step += 1
+                new.cost += (cave_start_pos + distance + 2) * self.step_cost_per_type[item_type]
+                new.parent_state = copy.deepcopy(self.state)
+                new_nodes.append(new)
         return new_nodes
 
     def get_next_possible_nodes(self) -> list["Node"]:
@@ -146,17 +148,16 @@ class Node:
 
         # start from caves
         for cave_idx, c in enumerate(self.state.c):
-            sc = self.step_cost_per_type[self.target_order[cave_idx]]
             if caves_entry_ready[cave_idx]:
                 continue
             elif c[0] != ".":
                 n = copy.deepcopy(self)
                 n.state.c[cave_idx][0] = "."
-                [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, c[0], 1 * sc)]
+                [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, 0, c[0])]
             elif c[1] != ".":
                 n = copy.deepcopy(self)
                 n.state.c[cave_idx][1] = "."
-                [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, c[1], 2 * sc)]
+                [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, 1, c[1])]
 
         # start from hallway
         for h_idx, type_ in enumerate(self.state.h):
@@ -170,6 +171,7 @@ class Node:
                 new.state.h[h_idx] = "."
                 new.step += 1
                 new.cost += dist_to_cave * sc
+                new.parent_state = copy.deepcopy(self.state)
                 if self.state.c[cave_idx][1] == ".":
                     new.state.c[cave_idx][1] = type_
                     new.cost += 2 * sc
@@ -184,20 +186,35 @@ class Node:
 
 
 class Graph:
-    def __init__(self):
+    def __init__(self, start_state: State):
         self.nodes: dict[State, Node] = {}
         self.best_cost = 10**6
+        self.start_state = start_state
+        self.end_state: State | None = None
+        self.find_shortest_path()
 
-    def find_shortest_path(self, start: Node):
+    def find_shortest_path(self, start: Node | None = None):
+        if start is None:
+            start = Node(self.start_state)
         if start in self.nodes and start.cost >= self.nodes[start].cost:
             return
         self.nodes[start.state] = start
         if start.is_finished():
             self.best_cost = start.cost
+            self.end_state = start.state
+            # print(self.best_cost, start.step)
         else:
             for next_node in start.get_next_possible_nodes():
                 if next_node.cost < self.best_cost:
                     self.find_shortest_path(next_node)
+
+    def print_shortest_path(self):
+        state = self.end_state
+        path_traceback: list[Node] = [state]
+        while state := self.nodes[state].parent_state:
+            path_traceback.append(self.nodes[state])
+        for node in reversed(path_traceback):
+            print(f"{node}")
 
 
 def parse_input_file(file_path: Path) -> State:
@@ -231,14 +248,8 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("example_input.txt")
     assert file_path.exists()
 
-    state = parse_input_file(file_path)
-    state2 = parse_input_file(file_path)
-    print(state)
-    print(state != state2, state == state2)
-    next_nodes = Node(state).get_next_possible_nodes()
-    for n in next_nodes:
-        print(n)
-
-    graph = Graph()
-    graph.find_shortest_path(Node(state))
+    start_state = parse_input_file(file_path)
+    graph = Graph(start_state)
+    # print(graph.nodes)
+    graph.print_shortest_path()
     print(graph.best_cost)
