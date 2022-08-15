@@ -182,14 +182,19 @@ class Node:
                 new_state.step += 1
                 new_state.cost += dist_to_cave * sc
                 new_state.parent_state = copy.deepcopy(self.state)
-                if self.state.c[cave_idx][1] == ".":
-                    new_state.state.c[cave_idx][1] = type_
-                    new_state.cost += 2 * sc
-                elif self.state.c[cave_idx][0] == ".":
-                    new_state.state.c[cave_idx][0] = type_
-                    new_state.cost += sc
-                else:
-                    raise ValueError(f"Illegal node {new_state} {type_}")
+                for place, place_type in reversed(list(enumerate(self.state.c[cave_idx]))):
+                    if place_type == ".":
+                        new_state.state.c[cave_idx][place] = type_
+                        new_state.cost += (place + 1) * sc
+                        break
+                # if self.state.c[cave_idx][1] == ".":
+                #     new_state.state.c[cave_idx][1] = type_
+                #     new_state.cost += 2 * sc
+                # elif self.state.c[cave_idx][0] == ".":
+                #     new_state.state.c[cave_idx][0] = type_
+                #     new_state.cost += sc
+                # else:
+                #     raise ValueError(f"Illegal node {new_state} {type_}")
                 return [new_state]
 
         next_nodes = list()
@@ -197,14 +202,12 @@ class Node:
         for cave_idx, c in enumerate(self.state.c):
             if caves_entry_ready[cave_idx]:
                 continue
-            elif c[0] != ".":
-                n = copy.deepcopy(self)
-                n.state.c[cave_idx][0] = "."
-                [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, 0, c[0])]
-            elif c[1] != ".":
-                n = copy.deepcopy(self)
-                n.state.c[cave_idx][1] = "."
-                [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, 1, c[1])]
+            for pl, type_ in enumerate(c):
+                if type_ != ".":
+                    n = copy.deepcopy(self)
+                    n.state.c[cave_idx][pl] = "."
+                    [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, pl, type_)]
+                    break
 
         next_nodes = sorted(next_nodes, key=lambda x: x.cost)
 
