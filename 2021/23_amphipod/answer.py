@@ -11,7 +11,6 @@ class State:
         cave2: list[str],
         cave3: list[str],
         hallway: list[str | None] = [".", ".", None, ".", None, ".", None, ".", None, ".", "."],
-        cost: int = 0,
     ):
         assert len(cave0) == 2
         assert len(cave1) == 2
@@ -27,7 +26,6 @@ class State:
         self.c.append(cave2)
         self.c.append(cave3)
         self.h = hallway
-        self.cost = cost
         self.target_order = ["A", "B", "C", "D"]
         self.type_to_cave = {cave: idx for idx, cave in enumerate(self.target_order)}
 
@@ -37,7 +35,7 @@ class State:
                #{self.h[0]}{self.h[1]}.{self.h[3]}.{self.h[5]}.{self.h[7]}.{self.h[9]}{self.h[10]}#
                ###{self.c[0][0]}#{self.c[1][0]}#{self.c[2][0]}#{self.c[3][0]}###
                  #{self.c[0][1]}#{self.c[1][1]}#{self.c[2][1]}#{self.c[3][1]}#
-                 #########\n"""
+                 #########"""
         return text
 
     def __eq__(self, other: "State"):
@@ -48,53 +46,14 @@ class State:
                 return False
         return True
 
-    def __ne__(self, other: "State"):
-        return not self.__eq__(other)
+    def __hash__(self):
+        return hash((tuple(c) for c in self.c) + tuple(self.h))
 
     def is_finished(self) -> bool:
         for cave, type_ in zip(self.c, self.target_order):
             if cave != [type_, type_]:
                 return False
         return True
-
-    def _explore_hallway(
-        self,
-        incomplete_starting_state: "State",
-        cave_idx: int,
-        item_type: str,
-        cost_offset: int,
-    ) -> list["State"]:
-        """
-        Returns all possibles States from start_idx [2, 4, 6, 8]
-        without colliding any other item in the hallway
-        """
-        assert cave_idx in range(4)
-        assert cost_offset in [1, 2]
-        h_idx_start = cave_idx * 2 + 2
-        new_states: list["State"] = []
-        # go leftwards
-        for distance, h_idx in reversed(list(enumerate(range(h_idx_start)))):
-            if self.h[h_idx] is None:
-                continue
-            elif self.h[h_idx] != ".":
-                break
-            else:
-                new_state = copy.deepcopy(incomplete_starting_state)
-                new_state.h[h_idx] = item_type
-                new_state.cost += cost_offset + distance
-                new_states.append(new_state)
-        # go rightwards
-        for distance, h_idx in enumerate(range(h_idx_start + 1, 11)):
-            if self.h[h_idx] is None:
-                continue
-            elif self.h[h_idx] != ".":
-                break
-            else:
-                new_state = copy.deepcopy(incomplete_starting_state)
-                new_state.h[h_idx] = item_type
-                new_state.cost += cost_offset + distance
-                new_states.append(new_state)
-        return new_states
 
     def are_caves_entry_ready(self) -> list[bool]:
         caves_entry_ready = []
@@ -120,42 +79,102 @@ class State:
                     return None
         return distance + 1
 
-    def get_next_possible_states(self) -> list["State"]:
-        next_states = list()
-        caves_entry_ready = self.are_caves_entry_ready()
+
+class Node:
+    def __init__(
+        self,
+        state: State,
+        parent_state: State | None = None,
+        cost: int = 0,
+    ):
+        self.state = state
+        self.parent_state = parent_state
+        self.cost = cost
+        self.step_cost_per_type = {"A": 1, "B": 10, "C": 100, "D": 1000}
+
+    def __repr__(self):
+        return f"{self.state}  {self.cost} \n"
+
+    def _explore_hallway(
+        self,
+        incomplete_starting_node: "Node",
+        cave_idx: int,
+        item_type: str,
+        cost_offset: int,
+    ) -> list["Node"]:
+        """
+        Returns all possibles States from start_idx [2, 4, 6, 8]
+        without colliding any other item in the hallway
+        """
+        assert cave_idx in range(4)
+        h_idx_start = cave_idx * 2 + 2
+        new_nodes: list["Node"] = []
+        # go leftwards
+        for distance, h_idx in enumerate(reversed(range(h_idx_start))):
+            if self.state.h[h_idx] is None:
+                continue
+            elif self.state.h[h_idx] != ".":
+                break
+            else:
+                new_node = copy.deepcopy(incomplete_starting_node)
+                new_node.state.h[h_idx] = item_type
+                new_node.cost += cost_offset + (distance + 1) * self.step_cost_per_type[item_type]
+                new_nodes.append(new_node)
+        # go rightwards
+        for distance, h_idx in enumerate(range(h_idx_start + 1, 11)):
+            if self.state.h[h_idx] is None:
+                continue
+            elif self.state.h[h_idx] != ".":
+                break
+            else:
+                new_node = copy.deepcopy(incomplete_starting_node)
+                new_node.state.h[h_idx] = item_type
+                new_node.cost += cost_offset + (distance + 1) * self.step_cost_per_type[item_type]
+                new_nodes.append(new_node)
+        return new_nodes
+
+    def get_next_possible_nodes(self) -> list["Node"]:
+        next_nodes = list()
+        caves_entry_ready = self.state.are_caves_entry_ready()
 
         # start from caves
-        for cave_idx, c in enumerate(self.c):
+        for cave_idx, c in enumerate(self.state.c):
+            sc = self.step_cost_per_type[self.state.target_order[cave_idx]]
             if caves_entry_ready[cave_idx]:
                 continue
             elif c[0] != ".":
-                s = copy.deepcopy(self)
-                s.c[cave_idx][0] = "."
-                [next_states.append(s) for s in self._explore_hallway(s, cave_idx, c[0], 1)]
+                n = copy.deepcopy(self)
+                n.state.c[cave_idx][0] = "."
+                [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, c[0], 1 * sc)]
             elif c[1] != ".":
-                s = copy.deepcopy(self)
-                s.c[cave_idx][1] = "."
-                [next_states.append(s) for s in self._explore_hallway(s, cave_idx, c[0], 2)]
+                n = copy.deepcopy(self)
+                n.state.c[cave_idx][1] = "."
+                [next_nodes.append(s) for s in self._explore_hallway(n, cave_idx, c[0], 2 * sc)]
 
         # start from hallway
-        for h_idx, type_ in enumerate(self.h):
+        for h_idx, type_ in enumerate(self.state.h):
             if type_ in [".", None]:
                 continue
-            target_cave_idx = self.type_to_cave[type_]
-            dist_to_cave = self.distance_to_cave(cave_idx=target_cave_idx, h_idx_start=h_idx)
+            target_cave_idx = self.state.type_to_cave[type_]
+            dist_to_cave = self.state.distance_to_cave(cave_idx=target_cave_idx, h_idx_start=h_idx)
             print(dist_to_cave)
             if caves_entry_ready[target_cave_idx] and dist_to_cave:
-                new_state = copy.deepcopy(self)
-                new_state.h[h_idx] = "."
+                new_node = copy.deepcopy(self)
+                new_node.state.h[h_idx] = "."
                 if self.c[target_cave_idx][1] == ".":
-                    new_state.c[target_cave_idx][1] = type_
+                    new_node.state.c[target_cave_idx][1] = type_
                 elif self.c[target_cave_idx][0] == ".":
-                    new_state.c[target_cave_idx][0] = type_
+                    new_node.state.c[target_cave_idx][0] = type_
                 else:
-                    raise ValueError(f"Illegal state {new_state} {type_}")
-                next_states.append(new_state)
+                    raise ValueError(f"Illegal node {new_node} {type_}")
+                next_nodes.append(new_node)
 
-        return next_states
+        return next_nodes
+
+
+class Graph:
+    def __init__(self, starting_node: State):
+        self.nodes = {starting_node: 0}
 
 
 def parse_input_file(file_path: Path) -> State:
@@ -192,7 +211,7 @@ if __name__ == "__main__":
     state = parse_input_file(file_path)
     state2 = parse_input_file(file_path)
     print(state)
-    print(state == state2)
-    next_states = state.get_next_possible_states()
-    for s in next_states:
-        print(s)
+    print(state != state2, state == state2)
+    next_nodes = Node(state).get_next_possible_nodes()
+    for n in next_nodes:
+        print(n)
