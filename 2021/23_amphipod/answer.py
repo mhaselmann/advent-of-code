@@ -12,14 +12,6 @@ class State:
         cave3: list[str],
         hallway: list[str | None] = [".", ".", None, ".", None, ".", None, ".", None, ".", "."],
     ):
-        assert len(cave0) == 2
-        assert len(cave1) == 2
-        assert len(cave2) == 2
-        assert len(cave3) == 2
-        assert hallway[2] is None
-        assert hallway[4] is None
-        assert hallway[6] is None
-        assert hallway[8] is None
         self.c = []
         self.c.append(cave0)
         self.c.append(cave1)
@@ -28,12 +20,24 @@ class State:
         self.h = hallway
 
     def __repr__(self):
-        text = f"""
-               #############
-               #{self.h[0]}{self.h[1]}.{self.h[3]}.{self.h[5]}.{self.h[7]}.{self.h[9]}{self.h[10]}#
-               ###{self.c[0][0]}#{self.c[1][0]}#{self.c[2][0]}#{self.c[3][0]}###
-                 #{self.c[0][1]}#{self.c[1][1]}#{self.c[2][1]}#{self.c[3][1]}#
-                 #########"""
+        if len(self.c[0]) == 2:
+            text = f"""
+                #############
+                #{self.h[0]}{self.h[1]}.{self.h[3]}.{self.h[5]}.{self.h[7]}.{self.h[9]}{self.h[10]}#
+                ###{self.c[0][0]}#{self.c[1][0]}#{self.c[2][0]}#{self.c[3][0]}###
+                  #{self.c[0][1]}#{self.c[1][1]}#{self.c[2][1]}#{self.c[3][1]}#
+                  #########"""
+        elif len(self.c[0]) == 4:
+            text = f"""
+                #############
+                #{self.h[0]}{self.h[1]}.{self.h[3]}.{self.h[5]}.{self.h[7]}.{self.h[9]}{self.h[10]}#
+                ###{self.c[0][0]}#{self.c[1][0]}#{self.c[2][0]}#{self.c[3][0]}###
+                  #{self.c[0][1]}#{self.c[1][1]}#{self.c[2][1]}#{self.c[3][1]}#
+                  #{self.c[0][2]}#{self.c[1][2]}#{self.c[2][2]}#{self.c[3][2]}#
+                  #{self.c[0][3]}#{self.c[1][3]}#{self.c[2][3]}#{self.c[3][3]}#
+                  #########"""
+        else:
+            raise NotImplementedError(len(self.c[0]), self.c[0])
         return text
 
     def __eq__(self, other: "State"):
@@ -92,10 +96,13 @@ class Node:
     def _are_caves_entry_ready(self) -> list[bool]:
         caves_entry_ready = []
         for c, targ_type in zip(self.state.c, self.target_order):
-            if c[0] == "." and c[1] in [".", targ_type] or c[0] == targ_type and c[1] == targ_type:
-                caves_entry_ready.append(True)
-            else:
-                caves_entry_ready.append(False)
+            caves_entry_ready.append(True)
+            for pl, type_ in reversed(list(enumerate(c))):
+                # print(c, targ_type, pl, type_, type_ not in [".", targ_type])
+                if type_ not in [".", targ_type]:
+                    caves_entry_ready[-1] = False
+                    # print(c, targ_type, "not ready", caves_entry_ready)
+                    break
         return caves_entry_ready
 
     def _explore_hallway(
@@ -150,8 +157,10 @@ class Node:
             if caves_entry_ready[cave_idx]:
                 continue
             for place, type_ in enumerate(c):
-                if type_ != "." and caves_entry_ready[self.type_to_cave[type_]]:
+                if type_ != ".":
                     target_cave_idx = self.type_to_cave[type_]
+                    if not caves_entry_ready[target_cave_idx]:
+                        break
                     hallway_dist = self.state.distance_to_cave(target_cave_idx, cave_idx * 2 + 2)
                     if hallway_dist is None:
                         break
@@ -222,14 +231,17 @@ class Graph:
         self.end_state = end_state
         if self.end_state is None:
             self.end_state = State(
-                cave0=["A", "A"], cave1=["B", "B"], cave2=["C", "C"], cave3=["D", "D"]
+                cave0=["A"] * len(start_state.c[0]),
+                cave1=["B"] * len(start_state.c[0]),
+                cave2=["C"] * len(start_state.c[0]),
+                cave3=["D"] * len(start_state.c[0]),
             )
         self.find_shortest_path()
 
     def find_shortest_path(self, start: Node | None = None):
         if start is None:
             start = Node(self.start_state)
-        if start in self.nodes and start.cost >= self.nodes[start].cost:
+        if start.state in self.nodes and start.cost >= self.nodes[start.state].cost:
             return
         self.nodes[start.state] = start
         if start.state == self.end_state:
@@ -255,26 +267,29 @@ class Graph:
 
 def parse_input_file(file_path: Path) -> State:
     with open(file_path) as f:
-        l = f.readlines()
-    return State(
-        cave0=[l[2][3], l[3][3]],
-        cave1=[l[2][5], l[3][5]],
-        cave2=[l[2][7], l[3][7]],
-        cave3=[l[2][9], l[3][9]],
-        hallway=[
-            l[1][1],
-            l[1][2],
-            None,
-            l[1][4],
-            None,
-            l[1][6],
-            None,
-            l[1][8],
-            None,
-            l[1][10],
-            l[1][11],
-        ],
-    )
+        lines = f.readlines()
+    cave0, cave1, cave2, cave3 = [], [], [], []
+    for l in lines[2:]:
+        if l[3] == "#":
+            break
+        cave0.append(l[3])
+        cave1.append(l[5])
+        cave2.append(l[7])
+        cave3.append(l[9])
+    hallway = [
+        lines[1][1],
+        lines[1][2],
+        None,
+        lines[1][4],
+        None,
+        lines[1][6],
+        None,
+        lines[1][8],
+        None,
+        lines[1][10],
+        lines[1][11],
+    ]
+    return State(cave0, cave1, cave2, cave3, hallway)
 
 
 if __name__ == "__main__":
@@ -284,12 +299,12 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("example_input.txt")
     assert file_path.exists()
 
-    target_path = Path("target_input.txt")
+    # target_path = Path("target_input.txt")
 
     start_state = parse_input_file(file_path)
-    end_state = parse_input_file(target_path)
+    # end_state = parse_input_file(target_path)
     print(start_state)
-    print(end_state)
+    # print(end_state)
     graph = Graph(start_state, end_state=None)
     # print(graph.nodes)
     graph.print_shortest_path()
