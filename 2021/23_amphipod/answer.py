@@ -67,7 +67,7 @@ class State:
                     return None
         return distance + 1
 
-    def valid_state(self):
+    def is_state_valid(self) -> bool:
         """
         for debugging
         """
@@ -98,7 +98,7 @@ class Node:
         self.type_to_cave = {cave: idx for idx, cave in enumerate(self.target_order)}
 
     def __repr__(self):
-        return f"{self.state}  {self.cost} \n"
+        return f"{self.state} ... {self.cost} \n"
 
     def is_finished(self) -> bool:
         for cave, type_ in zip(self.state.c, self.target_order):
@@ -110,15 +110,6 @@ class Node:
         caves_entry_ready = []
         for c, targ_type in zip(self.state.c, self.target_order):
             caves_entry_ready.append(None)
-            # for pl, type_ in reversed(list(enumerate(c))):
-            #     # print(c, targ_type, pl, type_, type_ not in [".", targ_type])
-            #     if type_ in [".", targ_type]:
-            #         caves_entry_ready[-1] = pl
-            #         # print(c, targ_type, "not ready", caves_entry_ready)
-            #     else:
-            #         caves_entry_ready[-1] = None
-            #         break
-
             for pl, type_ in enumerate(c):
                 if type_ == ".":
                     caves_entry_ready[-1] = pl
@@ -187,15 +178,6 @@ class Node:
                     hallway_dist = self.state.distance_to_cave(target_cave_idx, cave_idx * 2 + 2)
                     if hallway_dist is None:
                         break
-                    # if self.state.c[target_cave_idx][1] == ".":
-                    #     target_cave_pos = 1
-                    # else:
-                    #     target_cave_pos = 0
-                    # # print("HERE", target_cave_pos, target_cave_pos_)
-                    # # for targ_place, targ_place_type in self.state.c[target_cave_idx]:
-                    # #     if
-                    # if target_cave_pos != target_cave_pos_:
-                    #     raise Exception
                     next_node = copy.deepcopy(self)
                     next_node.step += 1
                     next_node.parent_state = copy.deepcopy(self.state)
@@ -224,14 +206,6 @@ class Node:
                         new_state.state.c[cave_idx][place] = type_
                         new_state.cost += (place + 1) * sc
                         break
-                # if self.state.c[cave_idx][1] == ".":
-                #     new_state.state.c[cave_idx][1] = type_
-                #     new_state.cost += 2 * sc
-                # elif self.state.c[cave_idx][0] == ".":
-                #     new_state.state.c[cave_idx][0] = type_
-                #     new_state.cost += sc
-                # else:
-                #     raise ValueError(f"Illegal node {new_state} {type_}")
                 return [new_state]
 
         next_nodes = list()
@@ -271,17 +245,14 @@ class Graph:
             start = Node(self.start_state)
         if start.state in self.nodes and start.cost >= self.nodes[start.state].cost:
             return
-        start.state.valid_state()
+        # start.state.is_state_valid()
         self.nodes[start.state] = start
         if start.state == self.end_state:
             self.best_cost = start.cost
             self.end_state = start.state
-            print("\n\nHERE", self.best_cost, start.step)
-            self.print_shortest_path()
+            print(f"Current shortest path length: {self.best_cost}")
         else:
-            # print(start)
             for next_node in start.get_next_possible_nodes():
-                # print(next_node)
                 if next_node.cost < self.best_cost:
                     self.find_shortest_path(next_node)
 
@@ -292,6 +263,7 @@ class Graph:
             path_traceback.append(self.nodes[state])
         for node in reversed(path_traceback):
             print(f"{node}")
+        print(f"\nShortest path length: {self.best_cost}")
 
 
 def parse_input_file(file_path: Path) -> State:
@@ -328,14 +300,8 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("example_input.txt")
     assert file_path.exists()
 
-    # target_path = Path("target_input.txt")
-
     start_state = parse_input_file(file_path)
-    # end_state = parse_input_file(target_path)
-    print(start_state)
-    # print(end_state)
-    graph = Graph(start_state, end_state=None)
-    # print(graph.nodes)
+    print(f"Starting state: {start_state}")
+
+    graph = Graph(start_state=start_state)
     graph.print_shortest_path()
-    print(graph.best_cost)
-    print(graph.start_state, graph.end_state)
