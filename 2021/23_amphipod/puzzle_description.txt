@@ -88,8 +88,6 @@ What is the least energy required to organize the amphipods?
 
 Your puzzle answer was 16489.
 
-The first half of this puzzle is complete! It provides one gold star: *
-
 --- Part Two ---
 As you prepare to give the amphipods your solution, you notice that the diagram they handed you was actually folded up. As you unfold it, you discover an extra part of the diagram.
 
@@ -310,9 +308,12 @@ In this updated example, the least energy required to organize these amphipods i
   #########
 Using the initial configuration from the full diagram, what is the least energy required to organize the amphipods?
 
-Answer: 
- 
+Your puzzle answer was 43413.
 
-Although it hasn't changed, you can still get your puzzle input.
+Both parts of this puzzle are complete! They provide two gold stars: **
+
+At this point, you should return to your Advent calendar and try another puzzle.
+
+If you still want to see it, you can get your puzzle input.
 
 You can also [Share] this puzzle.
