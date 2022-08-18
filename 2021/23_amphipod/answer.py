@@ -1,6 +1,5 @@
 import argparse
 import copy
-from multiprocessing.sharedctypes import Value
 from pathlib import Path
 
 
@@ -221,7 +220,6 @@ class Node:
                     break
 
         next_nodes = sorted(next_nodes, key=lambda x: x.cost)
-
         return next_nodes
 
 
