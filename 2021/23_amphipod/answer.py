@@ -1,5 +1,6 @@
 import argparse
 import copy
+from multiprocessing.sharedctypes import Value
 from pathlib import Path
 
 
@@ -66,6 +67,18 @@ class State:
                     return None
         return distance + 1
 
+    def valid_state(self):
+        """
+        for debugging
+        """
+        for cave_idx, c in enumerate(self.c):
+            last_place_occupied = True
+            for pl, type_ in reversed(list(enumerate(c))):
+                if type_ != "." and not last_place_occupied:
+                    raise Exception(cave_idx, c)
+                if type_ == ".":
+                    last_place_occupied = False
+
 
 class Node:
     def __init__(
@@ -93,15 +106,24 @@ class Node:
                 return False
         return True
 
-    def _are_caves_entry_ready(self) -> list[bool]:
+    def _are_caves_entry_ready(self) -> list[int | None]:
         caves_entry_ready = []
         for c, targ_type in zip(self.state.c, self.target_order):
-            caves_entry_ready.append(True)
-            for pl, type_ in reversed(list(enumerate(c))):
-                # print(c, targ_type, pl, type_, type_ not in [".", targ_type])
-                if type_ not in [".", targ_type]:
-                    caves_entry_ready[-1] = False
-                    # print(c, targ_type, "not ready", caves_entry_ready)
+            caves_entry_ready.append(None)
+            # for pl, type_ in reversed(list(enumerate(c))):
+            #     # print(c, targ_type, pl, type_, type_ not in [".", targ_type])
+            #     if type_ in [".", targ_type]:
+            #         caves_entry_ready[-1] = pl
+            #         # print(c, targ_type, "not ready", caves_entry_ready)
+            #     else:
+            #         caves_entry_ready[-1] = None
+            #         break
+
+            for pl, type_ in enumerate(c):
+                if type_ == ".":
+                    caves_entry_ready[-1] = pl
+                elif type_ != targ_type:
+                    caves_entry_ready[-1] = None
                     break
         return caves_entry_ready
 
@@ -154,20 +176,26 @@ class Node:
 
         # start from caves directly looking for target caves
         for cave_idx, c in enumerate(self.state.c):
-            if caves_entry_ready[cave_idx]:
+            if caves_entry_ready[cave_idx] is not None:
                 continue
             for place, type_ in enumerate(c):
                 if type_ != ".":
                     target_cave_idx = self.type_to_cave[type_]
-                    if not caves_entry_ready[target_cave_idx]:
+                    target_cave_pos = caves_entry_ready[target_cave_idx]
+                    if target_cave_pos is None:
                         break
                     hallway_dist = self.state.distance_to_cave(target_cave_idx, cave_idx * 2 + 2)
                     if hallway_dist is None:
                         break
-                    if self.state.c[target_cave_idx][1] == ".":
-                        target_cave_pos = 1
-                    else:
-                        target_cave_pos = 0
+                    # if self.state.c[target_cave_idx][1] == ".":
+                    #     target_cave_pos = 1
+                    # else:
+                    #     target_cave_pos = 0
+                    # # print("HERE", target_cave_pos, target_cave_pos_)
+                    # # for targ_place, targ_place_type in self.state.c[target_cave_idx]:
+                    # #     if
+                    # if target_cave_pos != target_cave_pos_:
+                    #     raise Exception
                     next_node = copy.deepcopy(self)
                     next_node.step += 1
                     next_node.parent_state = copy.deepcopy(self.state)
@@ -185,7 +213,7 @@ class Node:
             cave_idx = self.type_to_cave[type_]
             sc = self.step_cost_per_type[self.target_order[cave_idx]]
             dist_to_cave = self.state.distance_to_cave(cave_idx, h_idx)
-            if caves_entry_ready[cave_idx] and dist_to_cave:
+            if caves_entry_ready[cave_idx] is not None and dist_to_cave:
                 new_state = copy.deepcopy(self)
                 new_state.state.h[h_idx] = "."
                 new_state.step += 1
@@ -243,6 +271,7 @@ class Graph:
             start = Node(self.start_state)
         if start.state in self.nodes and start.cost >= self.nodes[start.state].cost:
             return
+        start.state.valid_state()
         self.nodes[start.state] = start
         if start.state == self.end_state:
             self.best_cost = start.cost
