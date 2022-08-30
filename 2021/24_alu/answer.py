@@ -6,6 +6,15 @@ Variables = dict[str, int]
 Program = list[tuple[str, str, str]]
 
 
+def digit_list_as_int(digit_list: list[str | int]):
+    number = map(str, digit_list)
+    number = "".join(number)
+    try:
+        return int(number)
+    except ValueError:
+        return None
+
+
 def perform_instruction(vars_: Variables, op: str, a: str, b: str | int):
     if isinstance(b, str):
         b = vars_[b]
@@ -23,10 +32,8 @@ def perform_instruction(vars_: Variables, op: str, a: str, b: str | int):
 
 class Monad:
     def __init__(self, file_path: Path):
-        self.variables: Variables = {"w": 0, "x": 0, "y": 0, "z": 0}
         self.programs: list[Program] = []
-        self.decreasing_place: list[bool] = []
-        self.largest_digits_with_z0: list[int] = []
+        self.descrease: list[bool] = []
         with open(file_path) as f:
             for line in f:
                 splits = line.split()
@@ -40,10 +47,10 @@ class Monad:
                         b = splits[2]
                     self.programs[-1].append((op, a, b))
                     if op == "div" and a == "z" and b == 26:
-                        self.decreasing_place.append(True)
+                        self.descrease.append(True)
                     elif op == "div" and a == "z" and b == 1:
-                        self.decreasing_place.append(False)
-        assert len(self.programs) == 14 and len(self.decreasing_place) == 14
+                        self.descrease.append(False)
+        assert len(self.programs) == 14 and len(self.descrease) == 14
         self.digit_list: list[str | int] = [""] * 14
 
     def _search_number(
@@ -65,29 +72,22 @@ class Monad:
                 perform_instruction(vars_, op, a, b)
             if place == 13 and vars_["z"] == 0:
                 return True
-            elif self.decreasing_place[place] and vars_["z"] > parent_vars["z"] / 10:
+            elif self.descrease[place] and vars_["z"] > parent_vars["z"] / 10:
                 continue
             elif self._search_number(largest, vars_, place + 1):
                 return True
         self.digit_list[place] = ""
         return False  # if all digits are invalid go left
 
-    def digit_list_as_int(self):
-        number = map(str, self.digit_list)
-        number = "".join(number)
-        return int(number)
-
     def search_largest_number(self):
         self.digit_list: list[str, int] = [""] * 14
-        success = self._search_number(largest=True)
-        if success:
-            return self.digit_list_as_int()
+        self._search_number(largest=True)
+        return digit_list_as_int(self.digit_list)
 
     def search_smallest_number(self):
         self.digit_list: list[str, int] = [""] * 14
-        success = self._search_number(largest=False)
-        if success:
-            return self.digit_list_as_int()
+        self._search_number(largest=False)
+        return digit_list_as_int(self.digit_list)
 
 
 if __name__ == "__main__":
