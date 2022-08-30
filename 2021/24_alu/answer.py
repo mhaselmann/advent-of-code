@@ -25,6 +25,7 @@ class MONAD:
     def __init__(self, file_path: Path):
         self.variables: Variables = {"w": 0, "x": 0, "y": 0, "z": 0}
         self.programs: list[Program] = []
+        self.decreasing_place: list[bool] = []
         self.largest_digits_with_z0: list[int] = []
         with open(file_path) as f:
             for line in f:
@@ -38,22 +39,52 @@ class MONAD:
                     except ValueError:
                         b = splits[2]
                     self.programs[-1].append((op, a, b))
+                    if op == "div" and a == "z" and b == 26:
+                        self.decreasing_place.append(True)
+                    elif op == "div" and a == "z" and b == 1:
+                        self.decreasing_place.append(False)
+        print(self.decreasing_place)
+        assert len(self.programs) == 14 and len(self.decreasing_place) == 14
+        self.largest_number_list: list[str, int] = [""] * 14
 
-    def search_largest_number_with_z0(self):
-        for digit_place, program in enumerate(self.programs):
-            for digit in reversed(range(1, 10)):  # 9, 8, ..., 2, 1
-                variables = copy.deepcopy(self.variables)
-                variables["w"] = digit
-                for op, a, b in program:
-                    # print("before", variables, op, a, b)
-                    perform_instruction(variables, op, a, b)
-                    # print("after", variables)
-                print(digit_place, digit, variables)
-                if variables["z"] == 0:
-                    print(f"Largest digit at place {digit_place}: {digit}")
-                    self.variables = variables
-                    break
-            self.variables = variables
+    def search_largest_number(
+        self,
+        variables: Variables | None = None,
+        place: int = 0,
+    ) -> bool:  # part 1
+        if variables is None:
+            assert place == 0
+            variables = {"w": 0, "x": 0, "y": 0, "z": 0}
+        else:
+            variables = copy.deepcopy(variables)
+        program = self.programs[place]
+        descreasing = self.decreasing_place[place]
+        z_place_before = variables["z"]
+        for digit in reversed(range(1, 10)):
+            variables_ = copy.deepcopy(variables)
+            variables_["w"] = digit
+            self.largest_number_list[place] = digit
+            for op, a, b in program:
+                perform_instruction(variables_, op, a, b)
+            print(self.largest_number_list, place, variables_["z"])
+            if place == 13 and variables_["z"] == 0:
+                # self.largest_number_list[place] = digit
+                return True
+            elif descreasing and variables_["z"] > z_place_before / 10:
+                continue
+            else:
+                success = self.search_largest_number(variables_, place + 1)
+                if success:
+                    # self.largest_number_list[place] = digit
+                    return True
+        self.largest_number_list[place] = ""
+        return False  # if all digits are invalid go left
+
+    @property
+    def largest_number(self):
+        largest_number = map(str, self.largest_number_list)
+        largest_number = "".join(largest_number)
+        return int(largest_number)
 
 
 if __name__ == "__main__":
@@ -64,5 +95,5 @@ if __name__ == "__main__":
     assert file_path.exists()
 
     monad = MONAD(file_path)
-    print(monad.programs[0])
-    monad.search_largest_number_with_z0()
+    monad.search_largest_number()
+    print(f"Answer part 1: Larget number with z=0: {monad.largest_number}")
