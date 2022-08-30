@@ -6,22 +6,22 @@ Variables = dict[str, int]
 Program = list[tuple[str, str, str]]
 
 
-def perform_instruction(variables: Variables, op: str, a: str, b: str | int):
+def perform_instruction(vars_: Variables, op: str, a: str, b: str | int):
     if isinstance(b, str):
-        b = variables[b]
+        b = vars_[b]
     if op == "add":
-        variables[a] += b
+        vars_[a] += b
     elif op == "mul":
-        variables[a] *= b
+        vars_[a] *= b
     elif op == "div":
-        variables[a] //= b
+        vars_[a] //= b
     elif op == "mod":
-        variables[a] %= b
+        vars_[a] %= b
     elif op == "eql":
-        variables[a] = 1 if variables[a] == b else 0
+        vars_[a] = 1 if vars_[a] == b else 0
 
 
-class MONAD:
+class Monad:
     def __init__(self, file_path: Path):
         self.variables: Variables = {"w": 0, "x": 0, "y": 0, "z": 0}
         self.programs: list[Program] = []
@@ -49,26 +49,25 @@ class MONAD:
     def _search_number(
         self,
         largest: bool,
-        variables: Variables = {"w": 0, "x": 0, "y": 0, "z": 0},
+        parent_vars: Variables = {"w": 0, "x": 0, "y": 0, "z": 0},
         place: int = 0,
     ) -> bool:
         """
         * blocks with div z 1 -> always increases
         * blocks diz z 26 -> force a decrease by factor of approx. 1/26
         """
-        variables = copy.deepcopy(variables)
         digit_seq = reversed(range(1, 10)) if largest else range(1, 10)
         for digit in digit_seq:
-            variables_ = copy.deepcopy(variables)
-            variables_["w"] = digit
+            vars_ = copy.deepcopy(parent_vars)
+            vars_["w"] = digit
             self.digit_list[place] = digit
             for op, a, b in self.programs[place]:
-                perform_instruction(variables_, op, a, b)
-            if place == 13 and variables_["z"] == 0:
+                perform_instruction(vars_, op, a, b)
+            if place == 13 and vars_["z"] == 0:
                 return True
-            elif self.decreasing_place[place] and variables_["z"] > variables["z"] / 10:
+            elif self.decreasing_place[place] and vars_["z"] > parent_vars["z"] / 10:
                 continue
-            elif self._search_number(largest, variables_, place + 1):
+            elif self._search_number(largest, vars_, place + 1):
                 return True
         self.digit_list[place] = ""
         return False  # if all digits are invalid go left
@@ -98,6 +97,6 @@ if __name__ == "__main__":
     file_path = Path(args.i) if args.i else Path("input.txt")
     assert file_path.exists()
 
-    monad = MONAD(file_path)
-    print(f"Answer part 1: Larget number with z=0: {monad.search_largest_number()}")
-    print(f"Answer part 2: Smallest number with z=0: {monad.search_smallest_number()}")
+    monad = Monad(file_path)
+    print(f"Answer part 1 - Larget number with z=0: {monad.search_largest_number()}")
+    print(f"Answer part 2 - Smallest number with z=0: {monad.search_smallest_number()}")
