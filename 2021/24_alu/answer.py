@@ -43,48 +43,52 @@ class MONAD:
                         self.decreasing_place.append(True)
                     elif op == "div" and a == "z" and b == 1:
                         self.decreasing_place.append(False)
-        print(self.decreasing_place)
         assert len(self.programs) == 14 and len(self.decreasing_place) == 14
-        self.largest_number_list: list[str, int] = [""] * 14
+        self.digit_list: list[str | int] = [""] * 14
 
-    def search_largest_number(
+    def _search_number(
         self,
-        variables: Variables | None = None,
+        largest: bool,
+        variables: Variables = {"w": 0, "x": 0, "y": 0, "z": 0},
         place: int = 0,
-    ) -> bool:  # part 1
-        if variables is None:
-            assert place == 0
-            variables = {"w": 0, "x": 0, "y": 0, "z": 0}
-        else:
-            variables = copy.deepcopy(variables)
-        program = self.programs[place]
-        descreasing = self.decreasing_place[place]
-        z_place_before = variables["z"]
-        for digit in reversed(range(1, 10)):
+    ) -> bool:
+        """
+        * blocks with div z 1 -> always increases
+        * blocks diz z 26 -> force a decrease by factor of approx. 1/26
+        """
+        variables = copy.deepcopy(variables)
+        digit_seq = reversed(range(1, 10)) if largest else range(1, 10)
+        for digit in digit_seq:
             variables_ = copy.deepcopy(variables)
             variables_["w"] = digit
-            self.largest_number_list[place] = digit
-            for op, a, b in program:
+            self.digit_list[place] = digit
+            for op, a, b in self.programs[place]:
                 perform_instruction(variables_, op, a, b)
-            print(self.largest_number_list, place, variables_["z"])
             if place == 13 and variables_["z"] == 0:
-                # self.largest_number_list[place] = digit
                 return True
-            elif descreasing and variables_["z"] > z_place_before / 10:
+            elif self.decreasing_place[place] and variables_["z"] > variables["z"] / 10:
                 continue
-            else:
-                success = self.search_largest_number(variables_, place + 1)
-                if success:
-                    # self.largest_number_list[place] = digit
-                    return True
-        self.largest_number_list[place] = ""
+            elif self._search_number(largest, variables_, place + 1):
+                return True
+        self.digit_list[place] = ""
         return False  # if all digits are invalid go left
 
-    @property
-    def largest_number(self):
-        largest_number = map(str, self.largest_number_list)
-        largest_number = "".join(largest_number)
-        return int(largest_number)
+    def digit_list_as_int(self):
+        number = map(str, self.digit_list)
+        number = "".join(number)
+        return int(number)
+
+    def search_largest_number(self):
+        self.digit_list: list[str, int] = [""] * 14
+        success = self._search_number(largest=True)
+        if success:
+            return self.digit_list_as_int()
+
+    def search_smallest_number(self):
+        self.digit_list: list[str, int] = [""] * 14
+        success = self._search_number(largest=False)
+        if success:
+            return self.digit_list_as_int()
 
 
 if __name__ == "__main__":
@@ -95,5 +99,5 @@ if __name__ == "__main__":
     assert file_path.exists()
 
     monad = MONAD(file_path)
-    monad.search_largest_number()
-    print(f"Answer part 1: Larget number with z=0: {monad.largest_number}")
+    print(f"Answer part 1: Larget number with z=0: {monad.search_largest_number()}")
+    print(f"Answer part 2: Smallest number with z=0: {monad.search_smallest_number()}")
