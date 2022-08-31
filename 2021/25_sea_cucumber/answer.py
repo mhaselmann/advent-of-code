@@ -30,6 +30,20 @@ def step_east(items: Tensor) -> Tensor:
     return new_items
 
 
+def step_south(items: Tensor) -> Tensor:
+    free = items == 0
+    south = items == 2
+    desired = torch.roll(south, 1, 0)
+    accepted = torch.logical_and(desired, free)
+    rejected = torch.logical_and(desired, ~accepted)
+    rejected = torch.roll(rejected, -1, 0)
+    new_south = torch.logical_or(accepted, rejected)
+    new_items = torch.zeros(items.shape, dtype=torch.uint8)
+    new_items[items == 1] = 1
+    new_items[new_south > 0] = 2
+    return new_items
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code - Day 25: Sea cucumber")
     parser.add_argument("-i", help="Input file path")
@@ -39,5 +53,11 @@ if __name__ == "__main__":
 
     array = parse_input(file_path)
     print(array)
-
-    print(step_east(array))
+    for idx in range(10000):
+        array_ = array.clone()
+        array = step_east(array)
+        array = step_south(array)
+        if torch.equal(array, array_):
+            print(array)
+            print(f"No change after {idx + 1} steps")
+            break
