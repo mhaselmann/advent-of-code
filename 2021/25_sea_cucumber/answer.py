@@ -3,31 +3,32 @@ from ast import parse
 import copy
 from pathlib import Path
 
-import numpy as np
+import torch
+from torch import Tensor
 
 
-def parse_input(file_path: Path) -> np.ndarray:
+def parse_input(file_path: Path) -> Tensor:
     items = []
     with open(file_path) as f:
         for line in f:
             row_int = line.strip().replace(".", "0").replace(">", "1").replace("v", "2")
             items.append([int(c) for c in row_int])
-    return np.array(items, dtype=np.uint8)
+    return torch.tensor(items, dtype=torch.uint8)
 
 
-def step_east(items: np.ndarray) -> np.ndarray:
+def step_east(items: Tensor) -> Tensor:
     free = items == 0
     east = items == 1
-    desired = np.roll(east, 1)
+    desired = torch.roll(east, 1, 1)
     print("HERE")
-    print(east.astype(np.uint8))
-    print(desired.astype(np.uint8))
+    print(east.type(torch.uint8))
+    print(desired.type(torch.uint8))
     print("\n")
-    accepted = np.logical_and(desired, free)
-    rejected = np.logical_and(desired, ~accepted)
-    rejected = np.roll(rejected, -1)
-    new_east = np.logical_or(accepted, rejected)
-    new_items = np.zeros(items.shape, dtype=np.uint8)
+    accepted = torch.logical_and(desired, free)
+    rejected = torch.logical_and(desired, ~accepted)
+    rejected = torch.roll(rejected, -1, 1)
+    new_east = torch.logical_or(accepted, rejected)
+    new_items = torch.zeros(items.shape, dtype=torch.uint8)
     new_items[new_east > 0] = 1
     new_items[items == 2] = 2
     return new_items
