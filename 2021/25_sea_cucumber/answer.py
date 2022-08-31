@@ -1,6 +1,4 @@
 import argparse
-from ast import parse
-import copy
 from pathlib import Path
 
 import torch
@@ -16,31 +14,21 @@ def parse_input(file_path: Path) -> Tensor:
     return torch.tensor(items, dtype=torch.uint8)
 
 
-def step_east(items: Tensor) -> Tensor:
+def step(items: Tensor, east: bool) -> Tensor:
+    moving_idx = 1 if east else 2
+    frozen_idx = 2 if east else 1
+    axis = 1 if east else 0
+
     free = items == 0
-    east = items == 1
-    desired = torch.roll(east, 1, 1)
+    moving = items == moving_idx
+    desired = torch.roll(moving, 1, axis)
     accepted = torch.logical_and(desired, free)
     rejected = torch.logical_and(desired, ~accepted)
-    rejected = torch.roll(rejected, -1, 1)
-    new_east = torch.logical_or(accepted, rejected)
+    rejected = torch.roll(rejected, -1, axis)
+    new_moving = torch.logical_or(accepted, rejected)
     new_items = torch.zeros(items.shape, dtype=torch.uint8)
-    new_items[new_east > 0] = 1
-    new_items[items == 2] = 2
-    return new_items
-
-
-def step_south(items: Tensor) -> Tensor:
-    free = items == 0
-    south = items == 2
-    desired = torch.roll(south, 1, 0)
-    accepted = torch.logical_and(desired, free)
-    rejected = torch.logical_and(desired, ~accepted)
-    rejected = torch.roll(rejected, -1, 0)
-    new_south = torch.logical_or(accepted, rejected)
-    new_items = torch.zeros(items.shape, dtype=torch.uint8)
-    new_items[items == 1] = 1
-    new_items[new_south > 0] = 2
+    new_items[items == frozen_idx] = frozen_idx
+    new_items[new_moving > 0] = moving_idx
     return new_items
 
 
@@ -55,8 +43,8 @@ if __name__ == "__main__":
     print(array)
     for idx in range(10000):
         array_ = array.clone()
-        array = step_east(array)
-        array = step_south(array)
+        array = step(array, east=True)
+        array = step(array, east=False)
         if torch.equal(array, array_):
             print(array)
             print(f"No change after {idx + 1} steps")
