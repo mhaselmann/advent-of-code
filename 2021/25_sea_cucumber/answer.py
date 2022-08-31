@@ -20,10 +20,6 @@ def step_east(items: Tensor) -> Tensor:
     free = items == 0
     east = items == 1
     desired = torch.roll(east, 1, 1)
-    print("HERE")
-    print(east.type(torch.uint8))
-    print(desired.type(torch.uint8))
-    print("\n")
     accepted = torch.logical_and(desired, free)
     rejected = torch.logical_and(desired, ~accepted)
     rejected = torch.roll(rejected, -1, 1)
