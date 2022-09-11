@@ -2,7 +2,9 @@ package main
 
 import (
 	"container/heap"
+	"fmt"
 	"os"
+	"time"
 
 	"aoc2021/utils"
 )
@@ -11,11 +13,12 @@ type Node struct {
 	x, y int
 }
 
-// Priority Queue Implementation adapted from https://pkg.go.dev/container/heap#example__priorityQueue
+// Priority Queue Implementation ///////////////////////////////////////////////
+// adapted from https://pkg.go.dev/container/heap#example__priorityQueue
 // An Item is something we manage in a priority queue.
 type Item struct {
-	node Node   // The value of the item; arbitrary.
-	cost uint32 // The priority of the item in the queue.
+	node Node // The value of the item; arbitrary.
+	cost int  // The priority of the item in the queue.
 	// The index is needed by update and is maintained by the heap.Interface methods.
 	index int // The index of the item in the heap.
 }
@@ -53,15 +56,33 @@ func (pq *PriorityQueue) Pop() any {
 	return item
 }
 
-// update modifies the priority and value of an Item in the queue.
-func (pq *PriorityQueue) Update(item *Item, node Node, cost uint32) {
-	item.node = node
-	item.cost = cost
-	heap.Fix(pq, item.index)
+// End of Priority Queue Implementation ////////////////////////////////////////
+
+// create enlarged matrix for part 2 (see puzzle description)
+func createMatrixMxN(matrix *utils.MatrixU8, m int, n int) *utils.MatrixU8 {
+	finalNRows := matrix.NRows * m
+	finalNCols := matrix.NCols * n
+	matrixMxN := utils.CreateMatrixU8(finalNRows, finalNCols)
+	for rowI, row := range matrixMxN.E {
+		for colI := range row {
+			mI := rowI / matrix.NRows
+			rootRowI := rowI % matrix.NRows
+			nI := colI / matrix.NCols
+			rootColI := colI % matrix.NCols
+			value := matrix.E[rootRowI][rootColI]
+			for i := 0; i < mI+nI; i++ {
+				value += 1
+				if value > 9 {
+					value = 1
+				}
+			}
+			matrixMxN.E[rowI][colI] = value
+		}
+	}
+	return matrixMxN
 }
 
-// ---------------------------------------------------------------
-
+// get a slice of all neighbors of the node that have not been visited yet according to visited matrix
 func getUnvisitedNeighbors(node Node, visited utils.MatrixBool) []Node {
 	nodes := []Node{}
 	if node.y > 0 && !visited.E[node.y-1][node.x] {
@@ -79,8 +100,9 @@ func getUnvisitedNeighbors(node Node, visited utils.MatrixBool) []Node {
 	return nodes
 }
 
+// an implementation of the Dijkstra's algorithm optimized for the problem (Speed O(n));
+// O(n) because number of neighbors at most 4 according the the grid structure of the nodes
 func FindShortestPathCost(weights *utils.MatrixU8) int {
-	// initialize cost matrix
 	start := Node{
 		x: 0,
 		y: 0,
@@ -89,8 +111,8 @@ func FindShortestPathCost(weights *utils.MatrixU8) int {
 		x: weights.NCols - 1,
 		y: weights.NRows - 1,
 	}
-	costs := utils.CreateMatrixU32(weights.NRows, weights.NCols)
-	costs.SetAllElementsTo(4294967295)
+	costs := utils.CreateMatrixInt(weights.NRows, weights.NCols)
+	costs.SetAllElementsToMax()
 	costs.E[0][0] = 0
 	visited := utils.CreateMatrixBool(weights.NRows, weights.NCols)
 	pq := make(PriorityQueue, 0)
@@ -101,19 +123,18 @@ func FindShortestPathCost(weights *utils.MatrixU8) int {
 	for len(pq) > 0 {
 		item := heap.Pop(&pq).(*Item)
 		node := item.node
-		cost := int(costs.E[node.y][node.x])
+		cost := costs.E[node.y][node.x]
 		if node.x == end.x && node.y == end.y {
 			return cost
 		}
 		visited.E[node.y][node.x] = true
 		for _, nb := range getUnvisitedNeighbors(node, *visited) {
 			newNeighborCost := cost + int(weights.E[nb.y][nb.x])
-			if newNeighborCost < int(costs.E[nb.y][nb.x]) {
-				costs.E[nb.y][nb.x] = uint32(newNeighborCost)
+			if newNeighborCost < costs.E[nb.y][nb.x] {
+				costs.E[nb.y][nb.x] = newNeighborCost
 				heap.Push(&pq, &Item{node: nb, cost: costs.E[nb.y][nb.x]})
 			}
 		}
-
 	}
 	return -1
 }
@@ -127,6 +148,14 @@ func main() {
 	if err != nil {
 		os.Exit(2)
 	}
-	cost := FindShortestPathCost(weights)
-	print(cost)
+	startTime := time.Now()
+	costPart1 := FindShortestPathCost(weights)
+	elapsedTime := time.Since(startTime)
+	fmt.Printf("Answer part 1: Shortest path's cost: %v after %v\n", costPart1, elapsedTime)
+
+	weights5x5 := createMatrixMxN(weights, 5, 5)
+	startTime = time.Now()
+	costPart2 := FindShortestPathCost(weights5x5)
+	elapsedTime = time.Since(startTime)
+	fmt.Printf("Answer part 2: Shortest path's cost: %v after %v\n", costPart2, elapsedTime)
 }
