@@ -17,10 +17,9 @@ type Node struct {
 // adapted from https://pkg.go.dev/container/heap#example__priorityQueue
 // An Item is something we manage in a priority queue.
 type Item struct {
-	node Node // The value of the item; arbitrary.
-	cost int  // The priority of the item in the queue.
-	// The index is needed by update and is maintained by the heap.Interface methods.
-	index int // The index of the item in the heap.
+	node  Node // payload
+	cost  int  // The cost of the item in the queue
+	index int  // The index of the item in the heap.
 }
 
 // A PriorityQueue implements heap.Interface and holds Items.
