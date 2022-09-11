@@ -22,7 +22,7 @@ type Item struct {
 	index int  // The index of the item in the heap.
 }
 
-// A PriorityQueue implements heap.Interface and holds Items.
+// A PriorityQueue implements heap.Interface and holds Items
 type PriorityQueue []*Item
 
 func (pq PriorityQueue) Len() int { return len(pq) }
