@@ -2,21 +2,20 @@ package main
 
 import (
 	"container/heap"
-	"fmt"
 	"os"
 
 	"aoc2021/utils"
 )
 
-type Point struct {
+type Node struct {
 	x, y int
 }
 
-// Priority Queue Implementation from https://pkg.go.dev/container/heap#example__priorityQueue
+// Priority Queue Implementation adapted from https://pkg.go.dev/container/heap#example__priorityQueue
 // An Item is something we manage in a priority queue.
 type Item struct {
-	value    Point  // The value of the item; arbitrary.
-	priority uint32 // The priority of the item in the queue.
+	node Node   // The value of the item; arbitrary.
+	cost uint32 // The priority of the item in the queue.
 	// The index is needed by update and is maintained by the heap.Interface methods.
 	index int // The index of the item in the heap.
 }
@@ -27,8 +26,8 @@ type PriorityQueue []*Item
 func (pq PriorityQueue) Len() int { return len(pq) }
 
 func (pq PriorityQueue) Less(i, j int) bool {
-	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
-	return pq[i].priority > pq[j].priority
+	// priority queue should return element with the lowest cost
+	return pq[i].cost < pq[j].cost
 }
 
 func (pq PriorityQueue) Swap(i, j int) {
@@ -55,46 +54,68 @@ func (pq *PriorityQueue) Pop() any {
 }
 
 // update modifies the priority and value of an Item in the queue.
-func (pq *PriorityQueue) Update(item *Item, value Point, priority uint32) {
-	item.value = value
-	item.priority = priority
+func (pq *PriorityQueue) Update(item *Item, node Node, cost uint32) {
+	item.node = node
+	item.cost = cost
 	heap.Fix(pq, item.index)
 }
 
 // ---------------------------------------------------------------
 
-func FindShortestPathCost(weights *utils.MatrixU8) (int, error) {
+func getUnvisitedNeighbors(node Node, visited utils.MatrixBool) []Node {
+	nodes := []Node{}
+	if node.y > 0 && !visited.E[node.y-1][node.x] {
+		nodes = append(nodes, Node{x: node.x, y: node.y - 1})
+	}
+	if node.x > 0 && !visited.E[node.y][node.x-1] {
+		nodes = append(nodes, Node{x: node.x - 1, y: node.y})
+	}
+	if node.y < visited.NRows-1 && !visited.E[node.y+1][node.x] {
+		nodes = append(nodes, Node{x: node.x, y: node.y + 1})
+	}
+	if node.x < visited.NCols-1 && !visited.E[node.y][node.x+1] {
+		nodes = append(nodes, Node{x: node.x + 1, y: node.y})
+	}
+	return nodes
+}
+
+func FindShortestPathCost(weights *utils.MatrixU8) int {
 	// initialize cost matrix
-	start := Point{
+	start := Node{
 		x: 0,
 		y: 0,
 	}
-	end := Point{
-		x: weights.NCols,
-		y: weights.NRows,
+	end := Node{
+		x: weights.NCols - 1,
+		y: weights.NRows - 1,
 	}
-	print(start.x)
-	print(end.x)
 	costs := utils.CreateMatrixU32(weights.NRows, weights.NCols)
 	costs.SetAllElementsTo(4294967295)
 	costs.E[0][0] = 0
 	visited := utils.CreateMatrixBool(weights.NRows, weights.NCols)
-	print(visited.NCols)
 	pq := make(PriorityQueue, 0)
 	heap.Push(&pq, &Item{
-		value:    start,
-		priority: costs.E[start.y][start.x],
+		node: start,
+		cost: costs.E[start.y][start.x],
 	})
-	// for len(pq) > 0 {
-	// 	item := heap.Pop(&pq).(*Item)
-	// 	cost := int(costs.E[item.value.y][item.value.x])
-	// 	if item.value.x == end.x && item.value.y == end.y {
-	// 		return cost, nil
-	// 	}
-	// 	visited.E[item.value.y][item.value.x] = true
+	for len(pq) > 0 {
+		item := heap.Pop(&pq).(*Item)
+		node := item.node
+		cost := int(costs.E[node.y][node.x])
+		if node.x == end.x && node.y == end.y {
+			return cost
+		}
+		visited.E[node.y][node.x] = true
+		for _, nb := range getUnvisitedNeighbors(node, *visited) {
+			newNeighborCost := cost + int(weights.E[nb.y][nb.x])
+			if newNeighborCost < int(costs.E[nb.y][nb.x]) {
+				costs.E[nb.y][nb.x] = uint32(newNeighborCost)
+				heap.Push(&pq, &Item{node: nb, cost: costs.E[nb.y][nb.x]})
+			}
+		}
 
-	// }
-	return 0, nil
+	}
+	return -1
 }
 
 func main() {
@@ -106,8 +127,6 @@ func main() {
 	if err != nil {
 		os.Exit(2)
 	}
-	cost, _ := FindShortestPathCost(weights)
+	cost := FindShortestPathCost(weights)
 	print(cost)
-	print(weights.E)
-	fmt.Printf("%v", weights.E)
 }

@@ -1,10 +1,11 @@
-// Priority queue implementiation copied from https://pkg.go.dev/container/heap#example__priorityQueue
 package main
 
 import (
 	"container/heap"
 	"fmt"
 )
+
+// Priority queue implementiation copied from https://pkg.go.dev/container/heap#example__priorityQueue
 
 // An Item is something we manage in a priority queue.
 type Item struct {
